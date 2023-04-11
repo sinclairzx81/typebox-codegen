@@ -27,20 +27,24 @@ THE SOFTWARE.
 import * as Types from '@sinclair/typebox'
 import { TypeBoxModel } from './model'
 import { Formatter } from './formatter'
+import { PropertyEncoder } from './encoder'
 
 // --------------------------------------------------------------------------
 // Errors
 // --------------------------------------------------------------------------
-export class TypeBoxToZodNonReferentialType extends Error {
+class ModelToZodNonReferentialType extends Error {
   constructor(message: string) {
     super(`TypeBoxToZod: ${message}`)
   }
 }
-export class TypeBoxToZodUnsupportedType extends Error {
+class ModelToZodUnsupportedType extends Error {
   constructor(message: string) {
     super(`TypeBoxToZod: ${message}`)
   }
 }
+// --------------------------------------------------------------------------
+// ModelToZod
+// --------------------------------------------------------------------------
 export namespace ModelToZod {
   function Any(schema: Types.TAny) {
     return `z.any()`
@@ -53,7 +57,7 @@ export namespace ModelToZod {
     return `z.boolean()`
   }
   function Constructor(schema: Types.TConstructor): string {
-    throw new TypeBoxToZodUnsupportedType(`TConstructor`)
+    throw new ModelToZodUnsupportedType(`TConstructor`)
   }
   function Function(schema: Types.TFunction) {
     const params = schema.parameters.map((param) => Visit(param)).join(`, `)
@@ -74,7 +78,7 @@ export namespace ModelToZod {
     // note: Zod only supports binary intersection. While correct, this is partially at odds with TypeScript's
     // ability to distribute across (A & B & C). This code reduces intersection to binary ops.
     function reduce(rest: Types.TSchema[]): string {
-      if (rest.length === 0) throw Error('Expected at least one intersect type')
+      if (rest.length === 0) return `z.never()`
       if (rest.length === 1) return Visit(rest[0])
       const [left, right] = [rest[0], rest.slice(1)]
       return `z.intersection(${Visit(left)}, ${reduce(right)})`
@@ -82,11 +86,7 @@ export namespace ModelToZod {
     return reduce(schema.allOf)
   }
   function Literal(schema: Types.TLiteral) {
-    if (typeof schema.const === `string`) {
-      return `z.literal('${schema.const}')`
-    } else {
-      return `z.literal(${schema.const})`
-    }
+    return typeof schema.const === `string` ? `z.literal('${schema.const}')` : `z.literal(${schema.const})`
   }
   function Never(schema: Types.TNever) {
     return `z.never()`
@@ -112,13 +112,12 @@ export namespace ModelToZod {
     return buffer.join(``)
   }
   function Object(schema: Types.TObject) {
-    const properties: string = globalThis.Object.entries(schema.properties)
-      .map(([key, value]) => {
-        const quoted = key.includes('-') || '1234567890'.includes(key.charAt(0))
-        const property = quoted ? `'${key}'` : key
-        return [`Optional`, `ReadonlyOptional`].includes(value[Types.Modifier] as string) ? `${property}: ${Visit(value)}.optional()` : `${property}: ${Visit(value)}`
-      })
-      .join(`,\n`)
+    // prettier-ignore
+    const properties = globalThis.Object.entries(schema.properties).map(([key, value]) => {
+      const optional = Types.TypeGuard.TOptional(value) || Types.TypeGuard.TReadonlyOptional(value)
+      const property = PropertyEncoder.Encode(key)
+      return optional ? `${property}: ${Visit(value)}.optional()` : `${property}: ${Visit(value)}`
+    }).join(`,`)
     const buffer: string[] = []
     buffer.push(`z.object({\n${properties}\n})`)
     if (schema.additionalProperties === false) buffer.push(`.strict()`)
@@ -132,7 +131,7 @@ export namespace ModelToZod {
     for (const [key, value] of globalThis.Object.entries(schema.patternProperties)) {
       const type = Visit(value)
       if (key === `^(0|[1-9][0-9]*)$`) {
-        throw new TypeBoxToZodUnsupportedType(`TRecord<TNumber, TUnknown>`)
+        throw new ModelToZodUnsupportedType(`TRecord<TNumber, TUnknown>`)
       } else {
         return `z.record(${type})`
       }
@@ -140,11 +139,11 @@ export namespace ModelToZod {
     throw Error(`TypeBoxToZod: Unreachable`)
   }
   function Ref(schema: Types.TRef) {
-    if (!reference_map.has(schema.$ref!)) throw new TypeBoxToZodNonReferentialType(schema.$ref!)
+    if (!reference_map.has(schema.$ref!)) throw new ModelToZodNonReferentialType(schema.$ref!)
     return schema.$ref
   }
   function This(schema: Types.TThis) {
-    if (!reference_map.has(schema.$ref!)) throw new TypeBoxToZodNonReferentialType(schema.$ref!)
+    if (!reference_map.has(schema.$ref!)) throw new ModelToZodNonReferentialType(schema.$ref!)
     recursive_set.add(schema.$ref)
     return schema.$ref
   }
@@ -153,8 +152,11 @@ export namespace ModelToZod {
     const items = schema.items.map((schema) => Visit(schema)).join(`, `)
     return `z.tuple([${items}])`
   }
+  function TemplateLiteral(schema: Types.TTemplateLiteral) {
+    return `z.string().regex(new RegExp('${schema.pattern}'))`
+  }
   function UInt8Array(schema: Types.TUint8Array): string {
-    throw new TypeBoxToZodUnsupportedType(`TUint8Array`)
+    throw new ModelToZodUnsupportedType(`TUint8Array`)
   }
   function Undefined(schema: Types.TUndefined) {
     return `z.undefined()`
@@ -168,86 +170,66 @@ export namespace ModelToZod {
   function Void(schema: Types.TVoid) {
     return `z.void()`
   }
+  function UnsupportedType(schema: Types.TSchema) {
+    return `z.any(/* ${schema[Types.Kind]} */)`
+  }
   function Visit(schema: Types.TSchema): string {
     if (schema.$id !== undefined) reference_map.set(schema.$id, schema)
-    if (Types.TypeGuard.TAny(schema)) {
-      return Any(schema)
-    } else if (Types.TypeGuard.TArray(schema)) {
-      return Array(schema)
-    } else if (Types.TypeGuard.TBoolean(schema)) {
-      return Boolean(schema)
-    } else if (Types.TypeGuard.TConstructor(schema)) {
-      return Constructor(schema)
-    } else if (Types.TypeGuard.TFunction(schema)) {
-      return Function(schema)
-    } else if (Types.TypeGuard.TInteger(schema)) {
-      return Integer(schema)
-    } else if (Types.TypeGuard.TIntersect(schema)) {
-      return Intersect(schema)
-    } else if (Types.TypeGuard.TLiteral(schema)) {
-      return Literal(schema)
-    } else if (Types.TypeGuard.TNever(schema)) {
-      return Never(schema)
-    } else if (Types.TypeGuard.TNull(schema)) {
-      return Null(schema)
-    } else if (Types.TypeGuard.TNumber(schema)) {
-      return Number(schema)
-    } else if (Types.TypeGuard.TObject(schema)) {
-      return Object(schema)
-    } else if (Types.TypeGuard.TPromise(schema)) {
-      return Promise(schema)
-    } else if (Types.TypeGuard.TRecord(schema)) {
-      return Record(schema)
-    } else if (Types.TypeGuard.TRef(schema)) {
-      return Ref(schema)
-    } else if (Types.TypeGuard.TString(schema)) {
-      return String(schema)
-    } else if (Types.TypeGuard.TThis(schema)) {
-      return This(schema)
-    } else if (Types.TypeGuard.TTuple(schema)) {
-      return Tuple(schema)
-    } else if (Types.TypeGuard.TUint8Array(schema)) {
-      return UInt8Array(schema)
-    } else if (Types.TypeGuard.TUndefined(schema)) {
-      return Undefined(schema)
-    } else if (Types.TypeGuard.TUnion(schema)) {
-      return Union(schema)
-    } else if (Types.TypeGuard.TUnknown(schema)) {
-      return Unknown(schema)
-    } else if (Types.TypeGuard.TVoid(schema)) {
-      return Void(schema)
-    } else {
-      throw Error(`TypeBoxToZod: Unknown type`)
+    if (schema.$id !== undefined && emitted_set.has(schema.$id!)) return schema.$id!
+    if (Types.TypeGuard.TAny(schema)) return Any(schema)
+    if (Types.TypeGuard.TArray(schema)) return Array(schema)
+    if (Types.TypeGuard.TBoolean(schema)) return Boolean(schema)
+    if (Types.TypeGuard.TConstructor(schema)) return Constructor(schema)
+    if (Types.TypeGuard.TFunction(schema)) return Function(schema)
+    if (Types.TypeGuard.TInteger(schema)) return Integer(schema)
+    if (Types.TypeGuard.TIntersect(schema)) return Intersect(schema)
+    if (Types.TypeGuard.TLiteral(schema)) return Literal(schema)
+    if (Types.TypeGuard.TNever(schema)) return Never(schema)
+    if (Types.TypeGuard.TNull(schema)) return Null(schema)
+    if (Types.TypeGuard.TNumber(schema)) return Number(schema)
+    if (Types.TypeGuard.TObject(schema)) return Object(schema)
+    if (Types.TypeGuard.TPromise(schema)) return Promise(schema)
+    if (Types.TypeGuard.TRecord(schema)) return Record(schema)
+    if (Types.TypeGuard.TRef(schema)) return Ref(schema)
+    if (Types.TypeGuard.TString(schema)) return String(schema)
+    if (Types.TypeGuard.TTemplateLiteral(schema)) return TemplateLiteral(schema)
+    if (Types.TypeGuard.TThis(schema)) return This(schema)
+    if (Types.TypeGuard.TTuple(schema)) return Tuple(schema)
+    if (Types.TypeGuard.TUint8Array(schema)) return UInt8Array(schema)
+    if (Types.TypeGuard.TUndefined(schema)) return Undefined(schema)
+    if (Types.TypeGuard.TUnion(schema)) return Union(schema)
+    if (Types.TypeGuard.TUnknown(schema)) return Unknown(schema)
+    if (Types.TypeGuard.TVoid(schema)) return Void(schema)
+    return UnsupportedType(schema)
+  }
+  function Collect(schema: Types.TSchema) {
+    return [...Visit(schema)].join(``)
+  }
+  function GenerateType(schema: Types.TSchema, references: Types.TSchema[]) {
+    const output: string[] = []
+    if (schema.$id === undefined) schema.$id = `T_Generated`
+    for (const reference of references) {
+      if (reference.$id === undefined) throw new ModelToZodNonReferentialType(JSON.stringify(reference))
+      reference_map.set(reference.$id, reference)
     }
+    const type = Collect(schema)
+    if (recursive_set.has(schema.$id!)) {
+      output.push(`export type ${schema.$id} = z.infer<typeof ${schema.$id}>`)
+      output.push(`export const ${schema.$id || `T`} = z.lazy(() => ${Formatter.Format(type)})`)
+    } else {
+      output.push(`export type ${schema.$id} = z.infer<typeof ${schema.$id}>`)
+      output.push(`export const ${schema.$id || `T`} = ${Formatter.Format(type)}`)
+    }
+    if (schema.$id) emitted_set.add(schema.$id)
+    return output.join('\n')
   }
   const reference_map = new Map<string, Types.TSchema>()
   const recursive_set = new Set<string>()
-  function GenerateType(schema: Types.TSchema, references: Types.TSchema[]) {
-    const emitted = new Set<string>()
-    const imports_code: string[] = []
-    const reference_code: string[] = []
-    const type_code: string[] = []
-    // initialize root schematic and reference map
-    if (schema.$id === undefined) schema.$id = `T_Generated`
-    for (const reference of references) {
-      if (reference.$id === undefined) throw new TypeBoxToZodNonReferentialType(JSON.stringify(reference))
-      reference_map.set(reference.$id, reference)
-    }
-    // render-type: If we detect the root schematic has been referenced, we interpret this as a recursive
-    // root. It`s noted that zod performs 4x slower when wrapped in a lazy(() => ...), so this is considered
-    // an optimization.
-    const typedef = [...Visit(schema)].join(``)
-    if (recursive_set.has(schema.$id!)) {
-      type_code.push(`export const ${schema.$id || `T`} = z.lazy(() => ${Formatter.Format(typedef)})`)
-    } else {
-      type_code.push(`export const ${schema.$id || `T`} = ${Formatter.Format(typedef)}`)
-    }
-    emitted.add(schema.$id!)
-
-    return [...imports_code, ...reference_code, ...type_code].join('\n')
-  }
-  /** Generate */
+  const emitted_set = new Set<string>()
   export function Generate(model: TypeBoxModel): string {
+    reference_map.clear()
+    recursive_set.clear()
+    emitted_set.clear()
     const buffer: string[] = [`import z from 'zod'`, '']
     for (const type of model.types) {
       buffer.push(GenerateType(type, model.types))
