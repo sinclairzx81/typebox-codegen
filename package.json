@@ -1,0 +1,33 @@
+{
+  "name": "typebox-codegen",
+  "version": "0.0.1",
+  "description": "Code Generation for TypeBox Types",
+  "main": "index.js",
+  "directories": {
+    "example": "example"
+  },
+  "scripts": {
+    "clean": "hammer task clean",
+    "format": "hammer task format",
+    "start": "hammer task start"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sinclairzx81/typebox-codegen.git"
+  },
+  "keywords": [
+    "typebox",
+    "codegen"
+  ],
+  "author": "sinclairzx81",
+  "license": "MIT",
+  "homepage": "https://github.com/sinclairzx81/typebox-codegen#readme",
+  "devDependencies": {
+    "@sinclair/hammer": "^0.17.2"
+  },
+  "dependencies": {
+    "@sinclair/typebox": "^0.27.3",
+    "prettier": "^2.8.7",
+    "typescript": "^5.0.4"
+  }
+}
