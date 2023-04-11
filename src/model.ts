@@ -26,7 +26,9 @@ THE SOFTWARE.
 
 import { TSchema } from '@sinclair/typebox'
 
-// --------------------------------------------------------------------------
-// TypeScriptToTypeBoxModel
-// --------------------------------------------------------------------------
-export type TypeBoxModel = Map<string, TSchema | Function>
+export interface TypeBoxModel {
+  /** Raw exports from the evaluated module */
+  exports: Map<string, TSchema | Function>
+  /** Types with associated $id references */
+  types: TSchema[]
+}

@@ -29,11 +29,10 @@ import { Type, TSchema } from '@sinclair/typebox'
 import { TypeBoxModel } from './model'
 import * as ts from 'typescript'
 
-// --------------------------------------------------------------------------
-// This code run an evaluation pass over TypeBox script and produces a Map
-// model of all the types encoded in the script. The model is then used to
-// project out to other formats.
-// --------------------------------------------------------------------------
+// -------------------------------------------------------------------------------
+// This code runs an evaluation pass over TypeBox script and produces a runtime
+// model that encodes all types found within the script.
+// -------------------------------------------------------------------------------
 export namespace TypeScriptToModel {
   const compilerOptions: ts.CompilerOptions = {
     module: ts.ModuleKind.CommonJS,
@@ -59,6 +58,7 @@ export namespace TypeScriptToModel {
     })
     const javascript = ts.transpileModule(typescript, { compilerOptions })
     const exports = Evaluate(javascript.outputText)
-    return new Map(globalThis.Object.entries(exports))
+    const evaluated = new Map(globalThis.Object.entries(exports))
+    return { exports: evaluated, types: [] }
   }
 }

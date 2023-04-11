@@ -110,7 +110,7 @@ export namespace ModelToJsonSchema {
   export function Generate(model: TypeBoxModel): string {
     map.clear()
     const definitions: string[] = []
-    for (const [key, schema] of model) {
+    for (const [key, schema] of model.exports) {
       if (typeof schema === 'function') continue
       definitions.push(`const ${key} = ${Visit(schema)}`)
       SetVisited(key, schema)
