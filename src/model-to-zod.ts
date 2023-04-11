@@ -269,7 +269,7 @@ export namespace TypeBoxToZod {
   }
   const reference_map = new Map<string, Types.TSchema>()
   const recursive_set = new Set<string>()
-  export function GenerateSchema(schema: Types.TSchema, references: Types.TSchema[], options: ZodCodegenOptions = { imports: true, exports: false }) {
+  function GenerateType(schema: Types.TSchema, references: Types.TSchema[], options: ZodCodegenOptions = { imports: true, exports: false }) {
     const emitted = new Set<string>()
     const exports = options.exports ? 'export' : ''
     const imports_code: string[] = []
@@ -315,7 +315,7 @@ export namespace TypeBoxToZod {
   export function Generate(model: TypeBoxModel): string {
     const buffer: string[] = []
     for (const type of model.types) {
-      buffer.push(GenerateSchema(type, model.types))
+      buffer.push(GenerateType(type, model.types))
     }
     return buffer.join('\n')
   }
