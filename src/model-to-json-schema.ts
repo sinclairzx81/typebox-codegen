@@ -25,42 +25,9 @@ THE SOFTWARE.
 ---------------------------------------------------------------------------*/
 
 import { TypeBoxModel } from './model'
+import { Formatter } from './formatter'
 import { Value } from '@sinclair/typebox/value'
 
-// -----------------------------------------------------------------
-// Formatter
-//
-// ChatGPT wrote this. Need a better formatting solution, I think
-// prettier might work well, but need to ensure it runs in a web
-// browser context.
-// -----------------------------------------------------------------
-namespace Formatter {
-  export function Format(code: string): string {
-    let formattedCode = ''
-    let indentLevel = 0
-    let inString = false
-    for (let i = 0; i < code.length; i++) {
-      const char = code.charAt(i)
-      if (char === '"') inString = !inString
-      if (!inString) {
-        if (char === '{' || char === '[') {
-          indentLevel++
-          formattedCode += char + '\n' + ' '.repeat(indentLevel * 2)
-        } else if (char === '}' || char === ']') {
-          indentLevel--
-          formattedCode += '\n' + ' '.repeat(indentLevel * 2) + char
-        } else if (char === ',') {
-          formattedCode += char + '\n' + ' '.repeat(indentLevel * 2)
-        } else {
-          formattedCode += char
-        }
-      } else {
-        formattedCode += char
-      }
-    }
-    return formattedCode
-  }
-}
 export namespace ModelToJsonSchema {
   // -----------------------------------------------------------------
   // Visited (Used to transform referenced schematics in JS references)

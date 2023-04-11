@@ -1,10 +1,8 @@
 /*--------------------------------------------------------------------------
 
-@sinclair/typebox/codegen
+@typebox/codegen
 
 The MIT License (MIT)
-
-Copyright (c) 2017-2023 Haydn Paterson (sinclair) <haydn.developer@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -28,45 +26,7 @@ THE SOFTWARE.
 
 import * as Types from '@sinclair/typebox'
 import { TypeBoxModel } from './model'
-
-// --------------------------------------------------------------------------
-// Formatter
-// --------------------------------------------------------------------------
-namespace Formatter {
-  export function Includes(line: string, token: string) {
-    return line.includes(token)
-  }
-  function IntentBefore(line: string) {
-    if (Includes(line, '({') && Includes(line, '})')) return 0
-    if (Includes(line, '([') && Includes(line, '])')) return 0
-    if (Includes(line, '{') && Includes(line, '}')) return 0
-    if (Includes(line, '])')) return -1
-    if (Includes(line, '})')) return -1
-    if (Includes(line, '}')) return -1
-    if (Includes(line, ']')) return -1
-    return 0
-  }
-  function IndentAfter(line: string) {
-    if (Includes(line, '({') && Includes(line, '})')) return 0
-    if (Includes(line, '([') && Includes(line, '])')) return 0
-    if (Includes(line, '{') && Includes(line, '}')) return 0
-    if (Includes(line, '([')) return 1
-    if (Includes(line, '({')) return 1
-    if (Includes(line, '{')) return 1
-    if (Includes(line, '[')) return 1
-    return 0
-  }
-  export function Format(input: string): string {
-    const output: string[] = []
-    let indent = 0
-    for (const line of input.split('\n').map((n) => n.trim())) {
-      indent += IntentBefore(line)
-      output.push(`${''.padStart(indent * 2, ' ')}${line}`)
-      indent += IndentAfter(line)
-    }
-    return output.join('\n')
-  }
-}
+import { Formatter } from './formatter'
 
 // --------------------------------------------------------------------------
 // Errors
@@ -81,14 +41,7 @@ export class TypeBoxToZodUnsupportedType extends Error {
     super(`TypeBoxToZod: ${message}`)
   }
 }
-// --------------------------------------------------------------------------
-// Transform
-// --------------------------------------------------------------------------
-export interface ZodCodegenOptions {
-  imports: boolean
-  exports: boolean
-}
-export namespace TypeBoxToZod {
+export namespace ModelToZod {
   function Any(schema: Types.TAny) {
     return `z.any()`
   }
@@ -269,9 +222,8 @@ export namespace TypeBoxToZod {
   }
   const reference_map = new Map<string, Types.TSchema>()
   const recursive_set = new Set<string>()
-  function GenerateType(schema: Types.TSchema, references: Types.TSchema[], options: ZodCodegenOptions = { imports: true, exports: false }) {
+  function GenerateType(schema: Types.TSchema, references: Types.TSchema[]) {
     const emitted = new Set<string>()
-    const exports = options.exports ? 'export' : ''
     const imports_code: string[] = []
     const reference_code: string[] = []
     const type_code: string[] = []
@@ -281,42 +233,25 @@ export namespace TypeBoxToZod {
       if (reference.$id === undefined) throw new TypeBoxToZodNonReferentialType(JSON.stringify(reference))
       reference_map.set(reference.$id, reference)
     }
-    // render-code: Imports required for the generated code
-    if (options.imports) {
-      imports_code.push(`import z from 'zod'`)
-    }
     // render-type: If we detect the root schematic has been referenced, we interpret this as a recursive
     // root. It`s noted that zod performs 4x slower when wrapped in a lazy(() => ...), so this is considered
     // an optimization.
     const typedef = [...Visit(schema)].join(``)
     if (recursive_set.has(schema.$id!)) {
-      type_code.push(`${exports} const ${schema.$id || `T`} = z.lazy(() => ${Formatter.Format(typedef)})`)
+      type_code.push(`export const ${schema.$id || `T`} = z.lazy(() => ${Formatter.Format(typedef)})`)
     } else {
-      type_code.push(`${exports} const ${schema.$id || `T`} = ${Formatter.Format(typedef)}`)
+      type_code.push(`export const ${schema.$id || `T`} = ${Formatter.Format(typedef)}`)
     }
     emitted.add(schema.$id!)
-    // render-reference: References may either be recursive or not. We track a recursive_set when visiting
-    // schemas of type TSelf. If we`ve never observed the reference through recursion, when it should be safe
-    // to omit the lazy(() => ...) wrap.
-    for (const reference of reference_map.values()) {
-      if (emitted.has(reference.$id!)) continue
-      const typedef = [...Visit(schema)].join(``)
-      if (recursive_set.has(reference.$id!)) {
-        reference_code.push(`${exports} const ${reference.$id} = z.lazy(() => ${typedef})`)
-      } else {
-        reference_code.push(`${exports} const ${reference.$id} = ${typedef}`)
-      }
-      emitted.add(reference.$id!)
-    }
-    return Formatter.Format([...imports_code, ...reference_code, ...type_code].join(`\n\n`))
-  }
 
+    return [...imports_code, ...reference_code, ...type_code].join('\n')
+  }
   /** Generate */
   export function Generate(model: TypeBoxModel): string {
-    const buffer: string[] = []
+    const buffer: string[] = [`import z from 'zod'`, '']
     for (const type of model.types) {
       buffer.push(GenerateType(type, model.types))
     }
-    return buffer.join('\n')
+    return Formatter.Format(buffer.join('\n'))
   }
 }

@@ -9,7 +9,8 @@
   "scripts": {
     "clean": "hammer task clean",
     "format": "hammer task format",
-    "start": "hammer task start"
+    "start": "hammer task start",
+    "serve": "hammer task serve"
   },
   "repository": {
     "type": "git",
@@ -23,7 +24,8 @@
   "license": "MIT",
   "homepage": "https://github.com/sinclairzx81/typebox-codegen#readme",
   "devDependencies": {
-    "@sinclair/hammer": "^0.17.2"
+    "@sinclair/hammer": "^0.17.2",
+    "@types/prettier": "^2.7.2"
   },
   "dependencies": {
     "@sinclair/typebox": "^0.27.3",

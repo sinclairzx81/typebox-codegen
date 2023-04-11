@@ -1,46 +1,33 @@
 import * as Codegen from '@typebox/codegen'
 
-const Code = `
-export interface Vector<T> {
-    x: T
-    y: T
-    z: T
+function Print(transform: string, code: any) {
+  const length = 72
+  console.log('┌' + '─'.repeat(length) + '┐')
+  console.log('│', transform.padEnd(length - 1) + '│')
+  console.log('└' + '─'.repeat(length) + '┘')
+  console.log('')
+  console.log(code)
+  console.log('')
 }
-type P = Vector<string>
+
+const Code = `
+export interface Vector {
+    x: number
+    y: number
+    z: number
+}
 `
 
-// ---------------------------------------------------------------
-// TypeBox
-// ---------------------------------------------------------------
-console.log('---------------------------------------------------')
+// ----------------------------------------------------------------------------
+// Immediate Transform
+// ----------------------------------------------------------------------------
+Print('TypeScript To TypeBox', Codegen.TypeScriptToTypeBox.Generate(Code))
 
-const typebox = Codegen.TypeScriptToTypeBox.Generate(Code)
-
-console.log(typebox)
-
-// ---------------------------------------------------------------
-// Model
-// ---------------------------------------------------------------
-console.log('---------------------------------------------------')
-
+// ----------------------------------------------------------------------------
+// Model Transform
+// ----------------------------------------------------------------------------
 const model = Codegen.TypeScriptToModel.Generate(Code)
-
-console.log(model)
-
-// ---------------------------------------------------------------
-// JSON Schema
-// ---------------------------------------------------------------
-console.log('---------------------------------------------------')
-
-const jsonschema = Codegen.ModelToJsonSchema.Generate(model)
-
-console.log(jsonschema)
-
-// ---------------------------------------------------------------
-// Zod
-// ---------------------------------------------------------------
-console.log('---------------------------------------------------')
-
-const zod = Codegen.TypeBoxToZod.Generate(model)
-
-console.log(zod)
+Print('TypeScript To Model', model)
+Print('Model To JsonSchema', Codegen.ModelToJsonSchema.Generate(model))
+Print('Model To TypeScript', Codegen.ModelToTypeScript.Generate(model))
+Print('Model To Zod', Codegen.ModelToZod.Generate(model))
