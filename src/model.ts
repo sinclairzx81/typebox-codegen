@@ -27,8 +27,8 @@ THE SOFTWARE.
 import { TSchema } from '@sinclair/typebox'
 
 export interface TypeBoxModel {
-  /** Raw exports from the evaluated module */
+  /** Exports from evaluated module */
   exports: Map<string, TSchema | Function>
-  /** Types with associated $id references */
+  /** Types with generated identifiers */
   types: TSchema[]
 }

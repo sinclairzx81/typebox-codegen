@@ -33,23 +33,26 @@ import * as ts from 'typescript'
 // This code runs an evaluation pass over TypeBox script and produces a runtime
 // model that encodes all types found within the script.
 // -------------------------------------------------------------------------------
+
+export type Exports = Map<string, TSchema | Function>
+
 export namespace TypeScriptToModel {
   const compilerOptions: ts.CompilerOptions = {
     module: ts.ModuleKind.CommonJS,
   }
-  export function Encode(schema: TSchema) {
-    const encoded = JSON.stringify(schema, null, 2)
-    return encoded.replace(/"([^"]+)":/g, '$1:')
-  }
-  export function Definition(key: string, schema: TSchema) {
-    const encoded = Encode(schema)
-    return `export const ${key} = ${encoded}`
-  }
-  export function Evaluate(code: string): Record<string, TSchema | Function> {
-    const exports: Record<string, TSchema | Function> = {}
+  export function Exports(code: string): Exports {
+    const exports = {}
     const evaluate = new Function('exports', 'Type', code)
     evaluate(exports, Type)
-    return exports
+    return new Map(globalThis.Object.entries(exports))
+  }
+  export function Types(exports: Exports): TSchema[] {
+    const types: TSchema[] = []
+    for (const [key, schema] of exports) {
+      if (typeof schema === 'function') continue
+      types.push({ ...schema, $id: key })
+    }
+    return types
   }
   export function Generate(typescriptCode: string): TypeBoxModel {
     const typescript = TypeScriptToTypeBox.Generate(typescriptCode, {
@@ -57,8 +60,8 @@ export namespace TypeScriptToModel {
       useTypeBoxImport: false,
     })
     const javascript = ts.transpileModule(typescript, { compilerOptions })
-    const exports = Evaluate(javascript.outputText)
-    const evaluated = new Map(globalThis.Object.entries(exports))
-    return { exports: evaluated, types: [] }
+    const exports = Exports(javascript.outputText)
+    const types = Types(exports)
+    return { exports, types }
   }
 }

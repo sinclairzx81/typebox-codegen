@@ -1,36 +1,46 @@
-import { ModelToJsonSchema, ModelToTypeBox, ModelToTypescript, TypeScriptToTypeBox, TypeScriptToModel } from '@typebox/codegen'
+import * as Codegen from '@typebox/codegen'
+
+const Code = `
+export interface Vector<T> {
+    x: T
+    y: T
+    z: T
+}
+type P = Vector<string>
+`
+
+// ---------------------------------------------------------------
+// TypeBox
+// ---------------------------------------------------------------
+console.log('---------------------------------------------------')
+
+const typebox = Codegen.TypeScriptToTypeBox.Generate(Code)
+
+console.log(typebox)
 
 // ---------------------------------------------------------------
 // Model
 // ---------------------------------------------------------------
-const model = TypeScriptToModel.Generate(`
-    interface Vector {
-        x: number,
-        y: number,
-        z: number
-    }   
-`)
-console.log('----------------------------------------------------')
+console.log('---------------------------------------------------')
+
+const model = Codegen.TypeScriptToModel.Generate(Code)
+
 console.log(model)
 
-// ----------------------------------------------------------------
-// TypeBox (Direct Transform)
-// ----------------------------------------------------------------
-const typebox = TypeScriptToTypeBox.Generate(`
-interface Vector {
-    x: number,
-    y: number,
-    z: number
-}   
-`)
-console.log('----------------------------------------------------')
-console.log(typebox)
-
 // ---------------------------------------------------------------
-// JsonSchema
+// JSON Schema
 // ---------------------------------------------------------------
+console.log('---------------------------------------------------')
 
-const jsonschema = ModelToJsonSchema.Generate(model)
+const jsonschema = Codegen.ModelToJsonSchema.Generate(model)
 
-console.log('----------------------------------------------------')
 console.log(jsonschema)
+
+// ---------------------------------------------------------------
+// Zod
+// ---------------------------------------------------------------
+console.log('---------------------------------------------------')
+
+const zod = Codegen.TypeBoxToZod.Generate(model)
+
+console.log(zod)
