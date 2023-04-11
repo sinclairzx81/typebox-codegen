@@ -43,6 +43,12 @@ export interface TypeScriptToTypeBoxOptions {
    * build is passed in into scope as a variable. The default is true.
    */
   useTypeBoxImport: boolean
+  /**
+   * Specifies if the output types should include an identifier associated with the assigned
+   * variable name. This is useful for remapping model types to targets, but optional for
+   * for TypeBox which can operate on vanilla JS references. The default is false.
+   */
+  useIdentifiers: boolean
 }
 /** Generates TypeBox types from TypeScript code */
 export namespace TypeScriptToTypeBox {
@@ -56,6 +62,8 @@ export namespace TypeScriptToTypeBox {
   const typeNames = new Set<string>()
   // (option) export override to ensure all schematics
   let useExportsEverything = false
+  // (option) inject identifiers
+  let useIdentifiers = false
   // ---------------------------------------------------------------------------------------
   // AST Query
   // ---------------------------------------------------------------------------------------
@@ -76,6 +84,17 @@ export namespace TypeScriptToTypeBox {
   }
   function IsNamespace(node: ts.ModuleDeclaration) {
     return node.flags === ts.NodeFlags.Namespace
+  }
+  // ---------------------------------------------------------------------------------------
+  // Identifiers
+  // ---------------------------------------------------------------------------------------
+  function InjectIdentifier($id: string, type: string) {
+    if (!useIdentifiers) return type
+    if (type.indexOf('(') === -1) return `Type.Ref(${type}, { $id: '${$id}' })`
+    if (type.lastIndexOf('()') === type.length - 2) return type.slice(0, type.length - 1) + `{ $id: '${$id}' })`
+    if (type.lastIndexOf('})') === type.length - 2) return type.slice(0, type.length - 1) + `, { $id: '${$id}' })`
+    if (type.lastIndexOf('])') === type.length - 2) return type.slice(0, type.length - 1) + `, { $id: '${$id}' })`
+    return type
   }
   // ---------------------------------------------------------------------------------------
   // Nodes
@@ -126,7 +145,7 @@ export namespace TypeScriptToTypeBox {
   // prettier-ignore
   function* TemplateLiteralTypeSpan(node: ts.TemplateLiteralTypeSpan) {
     const collect = node.getChildren().map(node => Collect(node)).join(', ')
-    if(collect.length > 0) yield `${collect}`
+    if (collect.length > 0) yield `${collect}`
   }
   function* TemplateHead(node: ts.TemplateHead) {
     if (node.text.length > 0) yield `Type.Literal('${node.text}'), `
@@ -202,17 +221,19 @@ export namespace TypeScriptToTypeBox {
       const names = node.typeParameters.map((param) => `${Collect(param)}`).join(', ')
       const members = PropertiesFromTypeElementArray(node.members)
       const staticDeclaration = `${exports}type ${node.name.getText()}<${constraints}> = Static<ReturnType<typeof ${node.name.getText()}<${names}>>>`
-      const rawTypeExpression = IsRecursiveType(node) ? `Type.Recursive(This => Type.Object(${members}), { $id: '${node.name.getText()}' })` : `Type.Object(${members})`
+      const rawTypeExpression = IsRecursiveType(node) ? `Type.Recursive(This => Type.Object(${members}))` : `Type.Object(${members})`
       const typeExpression = heritage.length === 0 ? rawTypeExpression : `Type.Intersect([${heritage.join(', ')}, ${rawTypeExpression}])`
-      const typeDeclaration = `${exports}const ${node.name.getText()} = <${constraints}>(${parameters}) => ${typeExpression}`
+      const type = InjectIdentifier(node.name.getText(), typeExpression)
+      const typeDeclaration = `${exports}const ${node.name.getText()} = <${constraints}>(${parameters}) => ${type}`
       yield `${staticDeclaration}\n${typeDeclaration}`
     } else {
       const exports = IsExport(node) ? 'export ' : ''
       const members = PropertiesFromTypeElementArray(node.members)
       const staticDeclaration = `${exports}type ${node.name.getText()} = Static<typeof ${node.name.getText()}>`
-      const rawTypeExpression = IsRecursiveType(node) ? `Type.Recursive(This => Type.Object(${members}), { $id: '${node.name.getText()}' })` : `Type.Object(${members})`
+      const rawTypeExpression = IsRecursiveType(node) ? `Type.Recursive(This => Type.Object(${members}))` : `Type.Object(${members})`
       const typeExpression = heritage.length === 0 ? rawTypeExpression : `Type.Intersect([${heritage.join(', ')}, ${rawTypeExpression}])`
-      const typeDeclaration = `${exports}const ${node.name.getText()} = ${typeExpression}`
+      const type = InjectIdentifier(node.name.getText(), typeExpression)
+      const typeDeclaration = `${exports}const ${node.name.getText()} = ${type}`
       yield `${staticDeclaration}\n${typeDeclaration}`
     }
     typeNames.add(node.name.getText())
@@ -230,17 +251,19 @@ export namespace TypeScriptToTypeBox {
       const names = node.typeParameters.map((param) => Collect(param)).join(', ')
       const $id = node.name.getText()
       const type_0 = Collect(node.type)
-      const type_1 = isRecursiveType ? `Type.Recursive(This => ${type_0}, { $id: '${$id}' })` : type_0
+      const type_1 = isRecursiveType ? `Type.Recursive(This => ${type_0})` : type_0
+      const type_2 = InjectIdentifier($id, type_1)
       const staticDeclaration = `${exports}type ${$id}<${constraints}> = Static<ReturnType<typeof ${$id}<${names}>>>`
-      const typeDeclaration = `${exports}const ${node.name.getText()} = <${constraints}>(${parameters}) => ${type_1}`
+      const typeDeclaration = `${exports}const ${node.name.getText()} = <${constraints}>(${parameters}) => ${type_2}`
       yield `${staticDeclaration}\n${typeDeclaration}`
     } else {
       const exports = IsExport(node) ? 'export ' : ''
       const $id = node.name.getText()
       const type_0 = Collect(node.type)
-      const type_1 = isRecursiveType ? `Type.Recursive(This => ${type_0}, { $id: '${$id}' })` : type_0
+      const type_1 = isRecursiveType ? `Type.Recursive(This => ${type_0})` : type_0
+      const type_2 = InjectIdentifier($id, type_1)
       const staticDeclaration = `${exports}type ${$id} = Static<typeof ${$id}>`
-      const typeDeclaration = `${exports}const ${$id} = ${type_1}`
+      const typeDeclaration = `${exports}const ${$id} = ${type_2}`
       yield `${staticDeclaration}\n${typeDeclaration}`
     }
     typeNames.add(node.name.getText())
@@ -391,9 +414,11 @@ export namespace TypeScriptToTypeBox {
     options: TypeScriptToTypeBoxOptions = {
       useExportEverything: false,
       useTypeBoxImport: true,
+      useIdentifiers: false,
     },
   ) {
     useExportsEverything = options.useExportEverything
+    useIdentifiers = options.useIdentifiers
     typeNames.clear()
     useImports = false
     useGenerics = false

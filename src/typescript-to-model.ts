@@ -33,20 +33,17 @@ import * as ts from 'typescript'
 // This code runs an evaluation pass over TypeBox script and produces a runtime
 // model that encodes all types found within the script.
 // -------------------------------------------------------------------------------
-
-export type Exports = Map<string, TSchema | Function>
-
 export namespace TypeScriptToModel {
   const compilerOptions: ts.CompilerOptions = {
     module: ts.ModuleKind.CommonJS,
   }
-  export function Exports(code: string): Exports {
+  export function Exports(code: string): Map<string, TSchema | Function> {
     const exports = {}
     const evaluate = new Function('exports', 'Type', code)
     evaluate(exports, Type)
     return new Map(globalThis.Object.entries(exports))
   }
-  export function Types(exports: Exports): TSchema[] {
+  export function Types(exports: Map<string, TSchema | Function>): TSchema[] {
     const types: TSchema[] = []
     for (const [key, schema] of exports) {
       if (typeof schema === 'function') continue
@@ -58,6 +55,7 @@ export namespace TypeScriptToModel {
     const typescript = TypeScriptToTypeBox.Generate(typescriptCode, {
       useExportEverything: true,
       useTypeBoxImport: false,
+      useIdentifiers: true,
     })
     const javascript = ts.transpileModule(typescript, { compilerOptions })
     const exports = Exports(javascript.outputText)

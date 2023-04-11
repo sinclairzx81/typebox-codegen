@@ -123,61 +123,39 @@ export namespace ModelToTypeScript {
   function Void(schema: Types.TVoid) {
     return `void`
   }
+  function UnsupportedType() {
+    return `never`
+  }
   function Visit(schema: Types.TSchema): string {
-    if (Types.TypeGuard.TAny(schema)) {
-      return Any(schema)
-    } else if (Types.TypeGuard.TArray(schema)) {
-      return Array(schema)
-    } else if (Types.TypeGuard.TBoolean(schema)) {
-      return Boolean(schema)
-    } else if (Types.TypeGuard.TConstructor(schema)) {
-      return Constructor(schema)
-    } else if (Types.TypeGuard.TFunction(schema)) {
-      return Function(schema)
-    } else if (Types.TypeGuard.TInteger(schema)) {
-      return Integer(schema)
-    } else if (Types.TypeGuard.TIntersect(schema)) {
-      return Intersect(schema)
-    } else if (Types.TypeGuard.TLiteral(schema)) {
-      return Literal(schema)
-    } else if (Types.TypeGuard.TNever(schema)) {
-      return Never(schema)
-    } else if (Types.TypeGuard.TNull(schema)) {
-      return Null(schema)
-    } else if (Types.TypeGuard.TNumber(schema)) {
-      return Number(schema)
-    } else if (Types.TypeGuard.TObject(schema)) {
-      return Object(schema)
-    } else if (Types.TypeGuard.TPromise(schema)) {
-      return Promise(schema)
-    } else if (Types.TypeGuard.TRecord(schema)) {
-      return Record(schema)
-    } else if (Types.TypeGuard.TRef(schema)) {
-      return Ref(schema)
-    } else if (Types.TypeGuard.TString(schema)) {
-      return String(schema)
-    } else if (Types.TypeGuard.TThis(schema)) {
-      return This(schema)
-    } else if (Types.TypeGuard.TTuple(schema)) {
-      return Tuple(schema)
-    } else if (Types.TypeGuard.TUint8Array(schema)) {
-      return UInt8Array(schema)
-    } else if (Types.TypeGuard.TUndefined(schema)) {
-      return Undefined(schema)
-    } else if (Types.TypeGuard.TUnion(schema)) {
-      return Union(schema)
-    } else if (Types.TypeGuard.TUnknown(schema)) {
-      return Unknown(schema)
-    } else if (Types.TypeGuard.TVoid(schema)) {
-      return Void(schema)
-    } else {
-      throw Error('TypeBoxToTypeScript: Unknown type')
-    }
+    if (Types.TypeGuard.TAny(schema)) return Any(schema)
+    if (Types.TypeGuard.TArray(schema)) return Array(schema)
+    if (Types.TypeGuard.TBoolean(schema)) return Boolean(schema)
+    if (Types.TypeGuard.TConstructor(schema)) return Constructor(schema)
+    if (Types.TypeGuard.TFunction(schema)) return Function(schema)
+    if (Types.TypeGuard.TInteger(schema)) return Integer(schema)
+    if (Types.TypeGuard.TIntersect(schema)) return Intersect(schema)
+    if (Types.TypeGuard.TLiteral(schema)) return Literal(schema)
+    if (Types.TypeGuard.TNever(schema)) return Never(schema)
+    if (Types.TypeGuard.TNull(schema)) return Null(schema)
+    if (Types.TypeGuard.TNumber(schema)) return Number(schema)
+    if (Types.TypeGuard.TObject(schema)) return Object(schema)
+    if (Types.TypeGuard.TPromise(schema)) return Promise(schema)
+    if (Types.TypeGuard.TRecord(schema)) return Record(schema)
+    if (Types.TypeGuard.TRef(schema)) return Ref(schema)
+    if (Types.TypeGuard.TString(schema)) return String(schema)
+    if (Types.TypeGuard.TThis(schema)) return This(schema)
+    if (Types.TypeGuard.TTuple(schema)) return Tuple(schema)
+    if (Types.TypeGuard.TUint8Array(schema)) return UInt8Array(schema)
+    if (Types.TypeGuard.TUndefined(schema)) return Undefined(schema)
+    if (Types.TypeGuard.TUnion(schema)) return Union(schema)
+    if (Types.TypeGuard.TUnknown(schema)) return Unknown(schema)
+    if (Types.TypeGuard.TVoid(schema)) return Void(schema)
+    return UnsupportedType()
   }
   /** Generates TypeScript code from TypeBox types */
   export function GenerateType(schema: Types.TSchema, references: Types.TSchema[] = []) {
     const buffer: string[] = []
-    buffer.push(`type ${schema.$id || 'T'} = ${[...Visit(schema)].join('')}`)
+    buffer.push(`export type ${schema.$id || 'T'} = ${[...Visit(schema)].join('')}`)
     return Formatter.Format(buffer.join('\n\n'))
   }
   export function Generate(model: TypeBoxModel) {

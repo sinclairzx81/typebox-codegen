@@ -79,7 +79,7 @@ export namespace ModelToJsonSchema {
     const definitions: string[] = []
     for (const [key, schema] of model.exports) {
       if (typeof schema === 'function') continue
-      definitions.push(`const ${key} = ${Visit(schema)}`)
+      definitions.push(`export const ${key} = ${Visit(schema)}`)
       SetVisited(key, schema)
     }
     return Formatter.Format(definitions.join('\n\n'))
