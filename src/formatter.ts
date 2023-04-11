@@ -24,17 +24,17 @@ THE SOFTWARE.
 
 ---------------------------------------------------------------------------*/
 
-import * as prettier from 'prettier/standalone'
-import * as prettier_typescript from 'prettier/parser-typescript'
+import * as prettier from "prettier/standalone";
+import * as prettier_typescript from "prettier/parser-typescript";
 
 export namespace Formatter {
   export function Format(code: string) {
     return prettier.format(code, {
-      parser: 'typescript',
+      parser: "typescript",
       plugins: [prettier_typescript],
-      trailingComma: 'none',
+      trailingComma: "none",
       singleQuote: true,
       semi: false,
-    })
+    });
   }
 }
