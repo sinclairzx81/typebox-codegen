@@ -25,3 +25,7 @@ $ npm start        # run the `example` script in node
 
 $ npm serve        # run the `example` script in browser
 ```
+
+## Formatting hook
+
+Set up pre-commit formatting hook by running `cp ./.git-hooks/pre-commit ./.git/hooks/`
