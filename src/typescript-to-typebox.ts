@@ -687,6 +687,9 @@ export namespace TypeScriptToTypeBox {
       return;
     } else if (ts.isIndexedAccessTypeNode(node)) {
       return yield getTypeForIndexedAccesType(node);
+      // noop
+    } else if (ts.isEmptyStatement(node)) {
+      return;
     } else {
       console.warn("Unhandled:", ts.SyntaxKind[node.kind], node.getText());
     }

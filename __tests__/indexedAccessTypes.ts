@@ -9,11 +9,11 @@ describe("IndexedAccessTypes - Typescript to Typebox", () => {
         test: {
           a: string;
         };
-      };
+      }
 
       export interface Address2 {
         street2: Address["test"];
-      };
+      }
       `;
     const expectedTypeboxOutput = `
       import { Type, Static } from '@sinclair/typebox';
@@ -44,11 +44,11 @@ describe("IndexedAccessTypes - Typescript to Typebox", () => {
         test: {
           a: string;
         };
-      };
+      }
 
       export interface Address2 {
         street2: Address["test"]["a"];
-      };
+      }
       `;
     const expectedTypeboxOutput = `
       import { Type, Static } from '@sinclair/typebox'

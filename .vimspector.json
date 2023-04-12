@@ -1,0 +1,58 @@
+{
+  "configurations": {
+    "run": {
+      "adapter": "vscode-node",
+      "breakpoints": {
+        "exception": {
+          "all": "N",
+          "uncaught": "Y"
+        }
+      },
+      "configuration": {
+        "request": "launch",
+        "protocol": "auto",
+        "stopOnEntry": false,
+        "console": "integratedTerminal",
+        "program": "${workspaceRoot}/src/index.ts",
+        "outFiles": ["${workspaceRoot}/dist/**/*.js"],
+        "cwd": "${workspaceRoot}"
+      }
+    },
+    "test by file": {
+      "adapter": "vscode-node",
+      "breakpoints": {
+        "exception": {
+          "all": "N",
+          "uncaught": "Y"
+        }
+      },
+      "configuration": {
+        "request": "launch",
+        "protocol": "auto",
+        "stopOnEntry": false,
+        "console": "integratedTerminal",
+        "program": "${workspaceRoot}/node_modules/jest/bin/jest.js",
+        "args": ["${FileName}"],
+        "cwd": "${workspaceRoot}"
+      }
+    },
+    "test by name": {
+      "adapter": "vscode-node",
+      "breakpoints": {
+        "exception": {
+          "all": "N",
+          "uncaught": "Y"
+        }
+      },
+      "configuration": {
+        "request": "launch",
+        "protocol": "auto",
+        "stopOnEntry": false,
+        "console": "integratedTerminal",
+        "program": "${workspaceRoot}/node_modules/jest/bin/jest.js",
+        "args": ["${FileName}", "-t", "${TestName}"],
+        "cwd": "${workspaceRoot}"
+      }
+    }
+  }
+}
