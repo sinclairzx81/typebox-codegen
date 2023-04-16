@@ -465,6 +465,7 @@ export namespace TypeScriptToTypeBox {
     typeNames.clear()
     useImports = false
     useGenerics = false
+    useTypeClone = false
     const source = ts.createSourceFile('types.ts', typescriptCode, ts.ScriptTarget.ESNext, true)
     const declarations = Formatter.Format([...Visit(source)].join('\n\n'))
     const imports = ImportStatement(options)
