@@ -29,10 +29,6 @@ import { Type, TSchema } from '@sinclair/typebox'
 import { TypeBoxModel } from '../model/model'
 import * as ts from 'typescript'
 
-// -------------------------------------------------------------------------------
-// This code runs an evaluation pass over TypeBox script and produces a runtime
-// model that encodes all types found within the script.
-// -------------------------------------------------------------------------------
 export namespace TypeScriptToModel {
   const compilerOptions: ts.CompilerOptions = {
     module: ts.ModuleKind.CommonJS,

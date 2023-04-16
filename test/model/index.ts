@@ -1,3 +1,1 @@
-import './boolean'
-import './number'
-import './string'
+import './types'

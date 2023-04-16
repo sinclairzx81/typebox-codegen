@@ -11,7 +11,7 @@ function Print(transform: string, code: any) {
   console.log('')
 }
 const Code = `
-  type A = string
+  type A = symbol
   type B = A
   type C = B
 

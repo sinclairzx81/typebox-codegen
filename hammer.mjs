@@ -13,9 +13,10 @@ export async function format() {
 // -------------------------------------------------------------------------------
 // Test
 // -------------------------------------------------------------------------------
-export async function test() {
+export async function test(filter = '') {
+    const pattern = filter.length > 0 ? `"--test-name-pattern=${filter}.*"` : ''    
     await shell('hammer build test/index.ts --dist target/test --platform node')
-    await shell('node target/test/index.js --test')
+    await shell(`node --test ${pattern} target/test/index.js`)
 }
 // -------------------------------------------------------------------------------
 // Serve

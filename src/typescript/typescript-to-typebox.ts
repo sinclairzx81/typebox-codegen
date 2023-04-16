@@ -392,6 +392,7 @@ export namespace TypeScriptToTypeBox {
     if (node.kind === ts.SyntaxKind.NumberKeyword) return yield `Type.Number()`
     if (node.kind === ts.SyntaxKind.BigIntKeyword) return yield `Type.BigInt()`
     if (node.kind === ts.SyntaxKind.StringKeyword) return yield `Type.String()`
+    if (node.kind === ts.SyntaxKind.SymbolKeyword) return yield `Type.Symbol()`
     if (node.kind === ts.SyntaxKind.BooleanKeyword) return yield `Type.Boolean()`
     if (node.kind === ts.SyntaxKind.UndefinedKeyword) return yield `Type.Undefined()`
     if (node.kind === ts.SyntaxKind.UnknownKeyword) return yield `Type.Unknown()`
