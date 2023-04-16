@@ -24,8 +24,14 @@ THE SOFTWARE.
 
 ---------------------------------------------------------------------------*/
 
-import { Formatter } from '../formatter/index'
+import { Formatter } from '../common/index'
 import * as ts from 'typescript'
+
+export class TypeScriptToTypeBoxError extends Error {
+  constructor(public readonly diagnostics: ts.Diagnostic[]) {
+    super('')
+  }
+}
 
 // --------------------------------------------------------------------------
 // TypeScriptToTypeBox
@@ -52,21 +58,35 @@ export interface TypeScriptToTypeBoxOptions {
 }
 /** Generates TypeBox types from TypeScript code */
 export namespace TypeScriptToTypeBox {
+  // ------------------------------------------------------------------------------------------------------------
+  // Transpile Options
+  // ------------------------------------------------------------------------------------------------------------
+  const transpilerOptions: ts.TranspileOptions = {
+    compilerOptions: {
+      strict: true,
+      target: ts.ScriptTarget.ES2022,
+    },
+  }
+  // ------------------------------------------------------------------------------------------------------------
+  // Transpile States
+  // ------------------------------------------------------------------------------------------------------------
   // (auto) tracked for recursive types and used to associate This type references
   let recursiveDeclaration: ts.TypeAliasDeclaration | ts.InterfaceDeclaration | null = null
   // (auto) tracked for injecting typebox import statements
   let useImports = false
   // (auto) tracked for injecting TSchema import statements
   let useGenerics = false
+  // (auto) tracked for cases where composition requires deep clone
+  let useTypeClone = false
   // (auto) tracked for each generated type.
   const typeNames = new Set<string>()
   // (option) export override to ensure all schematics
   let useExportsEverything = false
   // (option) inject identifiers
   let useIdentifiers = false
-  // ---------------------------------------------------------------------------------------
+  // ------------------------------------------------------------------------------------------------------------
   // AST Query
-  // ---------------------------------------------------------------------------------------
+  // ------------------------------------------------------------------------------------------------------------
   function FindRecursiveParent(decl: ts.InterfaceDeclaration | ts.TypeAliasDeclaration, node: ts.Node): boolean {
     return (ts.isTypeReferenceNode(node) && decl.name.getText() === node.typeName.getText()) || node.getChildren().some((node) => FindRecursiveParent(decl, node))
   }
@@ -85,20 +105,30 @@ export namespace TypeScriptToTypeBox {
   function IsNamespace(node: ts.ModuleDeclaration) {
     return node.flags === ts.NodeFlags.Namespace
   }
-  // ---------------------------------------------------------------------------------------
+  // ------------------------------------------------------------------------------------------------------------
   // Identifiers
-  // ---------------------------------------------------------------------------------------
+  // ------------------------------------------------------------------------------------------------------------
+  // Note: This function is only called when 'useIdentifiers' is true. What we're trying to achieve with
+  // identifier injection is a referential type model over the default inline model. For the purposes of
+  // code generation, we tend to prefer referential types as these can be both inlined or referenced in
+  // the codegen target; and where different targets may have different referential requirements. It
+  // should be possible to implement a more robust injection mechanism however. For review.
   function InjectIdentifier($id: string, type: string) {
     if (!useIdentifiers) return type
+    // indexer type
+    if (type.lastIndexOf(']') === type.length - 1) useTypeClone = true
+    if (type.lastIndexOf(']') === type.length - 1) return `TypeClone.Clone(${type}, { $id: '${$id}' })`
+
+    // referenced type
     if (type.indexOf('(') === -1) return `Type.Ref(${type}, { $id: '${$id}' })`
     if (type.lastIndexOf('()') === type.length - 2) return type.slice(0, type.length - 1) + `{ $id: '${$id}' })`
     if (type.lastIndexOf('})') === type.length - 2) return type.slice(0, type.length - 1) + `, { $id: '${$id}' })`
     if (type.lastIndexOf('])') === type.length - 2) return type.slice(0, type.length - 1) + `, { $id: '${$id}' })`
     return type
   }
-  // ---------------------------------------------------------------------------------------
+  // ------------------------------------------------------------------------------------------------------------
   // Nodes
-  // ---------------------------------------------------------------------------------------
+  // ------------------------------------------------------------------------------------------------------------
   function* SourceFile(node: ts.SourceFile): IterableIterator<string> {
     for (const next of node.getChildren()) {
       yield* Visit(next)
@@ -134,9 +164,6 @@ export namespace TypeScriptToTypeBox {
     const returnType = node.type === undefined ? `Type.Unknown()` : Collect(node.type)
     yield `${node.name.getText()}: Type.Function([${parameters}], ${returnType})`
   }
-  // -------------------------------------------------------------------------
-  // TemplateLiteral
-  // -------------------------------------------------------------------------
   // prettier-ignore
   function* TemplateLiteralTypeNode(node: ts.TemplateLiteralTypeNode) {
     const collect = node.getChildren().map(node => Collect(node)).join('')
@@ -274,6 +301,11 @@ export namespace TypeScriptToTypeBox {
     if (types.length === 1) return yield types[0]
     yield `Type.Intersect([${types.join(', ')}])`
   }
+  function* IndexedAccessType(node: ts.IndexedAccessTypeNode): IterableIterator<string> {
+    const obj = node.objectType.getText()
+    const key = node.indexType.getText()
+    yield `${obj}.properties[${key}]`
+  }
   function* ExpressionWithTypeArguments(node: ts.ExpressionWithTypeArguments): IterableIterator<string> {
     const name = Collect(node.expression)
     const typeArguments = node.typeArguments === undefined ? [] : node.typeArguments.map((node) => Collect(node))
@@ -362,6 +394,7 @@ export namespace TypeScriptToTypeBox {
     if (ts.isFunctionDeclaration(node)) return yield* FunctionDeclaration(node)
     if (ts.isFunctionTypeNode(node)) return yield* FunctionTypeNode(node)
     if (ts.isHeritageClause(node)) return yield* HeritageClause(node)
+    if (ts.isIndexedAccessTypeNode(node)) return yield* IndexedAccessType(node)
     if (ts.isIndexSignatureDeclaration(node)) return yield* isIndexSignatureDeclaration(node)
     if (ts.isInterfaceDeclaration(node)) return yield* InterfaceDeclaration(node)
     if (ts.isLiteralTypeNode(node)) return yield* LiteralTypeNode(node)
@@ -409,6 +442,15 @@ export namespace TypeScriptToTypeBox {
     }
     console.warn('Unhandled:', ts.SyntaxKind[node.kind], node.getText())
   }
+
+  export function ImportStatement(options: TypeScriptToTypeBoxOptions): string {
+    if (!(useImports && options.useTypeBoxImport)) return ''
+    const imported = ['Type', 'Static']
+    if (useGenerics) imported.push('TSchema')
+    if (useTypeClone) imported.push('TypeClone')
+    return `import { ${imported.join(', ')} } from '@sinclair/typebox'`
+  }
+
   /** Generates TypeBox types from TypeScript interface and type definitions */
   export function Generate(
     typescriptCode: string,
@@ -423,18 +465,14 @@ export namespace TypeScriptToTypeBox {
     typeNames.clear()
     useImports = false
     useGenerics = false
-    const source = ts.createSourceFile('code.ts', typescriptCode, ts.ScriptTarget.ESNext, true)
-    const typeDeclarations = [...Visit(source)].join('\n\n')
-    const importStatments: string[] = []
-    if (useImports && options.useTypeBoxImport) {
-      if (useGenerics) importStatments.push(`import { Type, Static, TSchema, SchemaOptions } from '@sinclair/typebox'`)
-      if (!useGenerics) importStatments.push(`import { Type, Static } from '@sinclair/typebox'`)
+    const source = ts.createSourceFile('types.ts', typescriptCode, ts.ScriptTarget.ESNext, true)
+    const declarations = Formatter.Format([...Visit(source)].join('\n\n'))
+    const imports = ImportStatement(options)
+    const typescript = [imports, '', declarations].join('\n')
+    const assertion = ts.transpileModule(typescript, transpilerOptions)
+    if (assertion.diagnostics && assertion.diagnostics.length > 0) {
+      throw new TypeScriptToTypeBoxError(assertion.diagnostics)
     }
-    const imports = importStatments.join('\n')
-    const types = Formatter.Format(typeDeclarations)
-    const typescript = [imports, '', types].join('\n')
-    const result = ts.transpileModule(typescript, {})
-    if (result.diagnostics && result.diagnostics.length > 0) throw 1
     return typescript
   }
 }

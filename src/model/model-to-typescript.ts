@@ -25,7 +25,7 @@ THE SOFTWARE.
 ---------------------------------------------------------------------------*/
 
 import * as Types from '@sinclair/typebox'
-import { Formatter } from '../formatter/index'
+import { Formatter } from '../common/index'
 import { TypeBoxModel } from './model'
 
 export namespace ModelToTypeScript {

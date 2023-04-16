@@ -1,1 +1,2 @@
+import './indexer'
 import './types'

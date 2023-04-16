@@ -25,3 +25,4 @@ THE SOFTWARE.
 ---------------------------------------------------------------------------*/
 
 export * from './encoder'
+export * from './formatter'
