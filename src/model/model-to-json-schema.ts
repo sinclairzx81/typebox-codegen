@@ -25,7 +25,7 @@ THE SOFTWARE.
 ---------------------------------------------------------------------------*/
 
 import { TypeBoxModel } from './model'
-import { Formatter } from './formatter'
+import { Formatter } from '../formatter/formatter'
 import { Value } from '@sinclair/typebox/value'
 
 export namespace ModelToJsonSchema {

@@ -24,8 +24,8 @@ THE SOFTWARE.
 
 ---------------------------------------------------------------------------*/
 
+import { Formatter } from '../formatter/index'
 import * as ts from 'typescript'
-import { Formatter } from './formatter'
 
 // --------------------------------------------------------------------------
 // TypeScriptToTypeBox

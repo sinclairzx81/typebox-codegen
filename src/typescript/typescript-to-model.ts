@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 import { TypeScriptToTypeBox } from './typescript-to-typebox'
 import { Type, TSchema } from '@sinclair/typebox'
-import { TypeBoxModel } from './model'
+import { TypeBoxModel } from '../model/model'
 import * as ts from 'typescript'
 
 // -------------------------------------------------------------------------------
