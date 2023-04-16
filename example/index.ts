@@ -1,16 +1,6 @@
 import { Type, Static } from '@sinclair/typebox'
 import * as Codegen from '@typebox/codegen'
 
-export type Vector = Static<typeof Vector>
-export const Vector = Type.Recursive(
-  (This) =>
-    Type.Object({
-      x: Type.Number(),
-      y: Type.Number(),
-      z: This,
-    }),
-  { $id: 'Vector' },
-)
 function Print(transform: string, code: any) {
   const length = 72
   console.log('┌' + '─'.repeat(length) + '┐')
