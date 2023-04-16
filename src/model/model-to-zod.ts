@@ -24,10 +24,9 @@ THE SOFTWARE.
 
 ---------------------------------------------------------------------------*/
 
-import * as Types from '@sinclair/typebox'
+import { Formatter, PropertyEncoder } from '../common/index'
 import { TypeBoxModel } from './model'
-import { Formatter } from './formatter'
-import { PropertyEncoder } from './encoder'
+import * as Types from '@sinclair/typebox'
 
 // --------------------------------------------------------------------------
 // Errors

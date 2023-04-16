@@ -24,6 +24,5 @@ THE SOFTWARE.
 
 ---------------------------------------------------------------------------*/
 
-export * from './common'
-export * from './model'
-export * from './typescript'
+export * from './typescript-to-model'
+export * from './typescript-to-typebox'

@@ -25,22 +25,19 @@ THE SOFTWARE.
 ---------------------------------------------------------------------------*/
 
 import { TypeScriptToTypeBox } from './typescript-to-typebox'
-import { Type, TSchema } from '@sinclair/typebox'
-import { TypeBoxModel } from './model'
+import { Type, TypeClone, TSchema } from '@sinclair/typebox'
+import { TypeBoxModel } from '../model/model'
 import * as ts from 'typescript'
 
-// -------------------------------------------------------------------------------
-// This code runs an evaluation pass over TypeBox script and produces a runtime
-// model that encodes all types found within the script.
-// -------------------------------------------------------------------------------
 export namespace TypeScriptToModel {
   const compilerOptions: ts.CompilerOptions = {
-    module: ts.ModuleKind.CommonJS,
+    module: ts.ModuleKind.CommonJS, // used for exports
+    target: ts.ScriptTarget.ES2015, // evaluation target
   }
   export function Exports(code: string): Map<string, TSchema | Function> {
     const exports = {}
-    const evaluate = new Function('exports', 'Type', code)
-    evaluate(exports, Type)
+    const evaluate = new Function('exports', 'Type', 'TypeClone', code)
+    evaluate(exports, Type, TypeClone)
     return new Map(globalThis.Object.entries(exports))
   }
   export function Types(exports: Map<string, TSchema | Function>): TSchema[] {

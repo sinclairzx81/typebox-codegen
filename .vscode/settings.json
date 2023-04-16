@@ -1,6 +1,7 @@
 {
   "files.exclude": {
     "node_modules": true,
-    "package0lock.json": true
+    "package-lock.json": true,
+    ".git-hooks": true
   }
 }

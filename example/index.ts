@@ -1,16 +1,6 @@
 import { Type, Static } from '@sinclair/typebox'
 import * as Codegen from '@typebox/codegen'
 
-export type Vector = Static<typeof Vector>
-export const Vector = Type.Recursive(
-  (This) =>
-    Type.Object({
-      x: Type.Number(),
-      y: Type.Number(),
-      z: This,
-    }),
-  { $id: 'Vector' },
-)
 function Print(transform: string, code: any) {
   const length = 72
   console.log('┌' + '─'.repeat(length) + '┐')
@@ -21,14 +11,12 @@ function Print(transform: string, code: any) {
   console.log('')
 }
 const Code = `
-  type A = string
-  type B = A
-  type C = B
-
-  interface Vector {
-    a: A
-    b: B
+  export interface Vector {
+    x: number
+    y: number
+    z: number
   }
+  type A = Vector['x']
 `
 // ----------------------------------------------------------------------------
 // Immediate Transform
