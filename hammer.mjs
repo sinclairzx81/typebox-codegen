@@ -8,7 +8,7 @@ export async function clean() {
 // Format
 // -------------------------------------------------------------------------------
 export async function format() {
-  await shell('prettier --no-semi --single-quote --print-width 240 --trailing-comma all --write src example')
+  await shell('prettier --write src example')
 }
 // -------------------------------------------------------------------------------
 // Serve
