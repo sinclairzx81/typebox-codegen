@@ -303,8 +303,8 @@ export namespace TypeScriptToTypeBox {
   }
   function* IndexedAccessType(node: ts.IndexedAccessTypeNode): IterableIterator<string> {
     const obj = node.objectType.getText()
-    const key = node.indexType.getText()
-    yield `${obj}.properties[${key}]`
+    const key = Collect(node.indexType)
+    yield `Type.Index(${obj}, ${key})`
   }
   function* ExpressionWithTypeArguments(node: ts.ExpressionWithTypeArguments): IterableIterator<string> {
     const name = Collect(node.expression)
@@ -465,6 +465,7 @@ export namespace TypeScriptToTypeBox {
     typeNames.clear()
     useImports = false
     useGenerics = false
+    useTypeClone = false
     const source = ts.createSourceFile('types.ts', typescriptCode, ts.ScriptTarget.ESNext, true)
     const declarations = Formatter.Format([...Visit(source)].join('\n\n'))
     const imports = ImportStatement(options)
