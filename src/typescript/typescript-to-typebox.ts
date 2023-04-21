@@ -319,7 +319,7 @@ export namespace TypeScriptToTypeBox {
     yield Collect(node.type)
   }
   function* RestTypeNode(node: ts.RestTypeNode): IterableIterator<string> {
-    yield `Type.Rest()`
+    yield `...Type.Rest(${node.type.getText()})`
   }
   function* ConditionalTypeNode(node: ts.ConditionalTypeNode): IterableIterator<string> {
     const checkType = Collect(node.checkType)

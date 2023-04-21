@@ -11,12 +11,9 @@ function Print(transform: string, code: any) {
   console.log('')
 }
 const Code = `
-  export interface Vector {
-    x: number
-    y: number
-    z: number
-  }
-  type A = Vector['x']
+  type A = [0, 1]
+  type B = [2, 3]
+  type C = [...A, ...B]
 `
 // ----------------------------------------------------------------------------
 // Immediate Transform
