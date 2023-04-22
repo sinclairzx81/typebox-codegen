@@ -32,7 +32,6 @@ export class TypeScriptToTypeBoxError extends Error {
     super('')
   }
 }
-
 // --------------------------------------------------------------------------
 // TypeScriptToTypeBox
 // --------------------------------------------------------------------------
@@ -72,6 +71,8 @@ export namespace TypeScriptToTypeBox {
   // ------------------------------------------------------------------------------------------------------------
   // (auto) tracked for recursive types and used to associate This type references
   let recursiveDeclaration: ts.TypeAliasDeclaration | ts.InterfaceDeclaration | null = null
+  // (auto) tracked for scoped block level definitions and used to prevent `export` emit when not in global scope.
+  let blockLevel: number = 0
   // (auto) tracked for injecting typebox import statements
   let useImports = false
   // (auto) tracked for injecting TSchema import statements
@@ -100,7 +101,7 @@ export namespace TypeScriptToTypeBox {
     return node.questionToken !== undefined
   }
   function IsExport(node: ts.InterfaceDeclaration | ts.TypeAliasDeclaration | ts.EnumDeclaration | ts.ModuleDeclaration): boolean {
-    return useExportsEverything || (node.modifiers !== undefined && node.modifiers.find((modifier) => modifier.getText() === 'export') !== undefined)
+    return blockLevel === 0 && (useExportsEverything || (node.modifiers !== undefined && node.modifiers.find((modifier) => modifier.getText() === 'export') !== undefined))
   }
   function IsNamespace(node: ts.ModuleDeclaration) {
     return node.flags === ts.NodeFlags.Namespace
@@ -151,6 +152,12 @@ export namespace TypeScriptToTypeBox {
     const type = Collect(node.elementType)
     yield `Type.Array(${type})`
   }
+  function* Block(node: ts.Block): IterableIterator<string> {
+    blockLevel += 1
+    const statments = node.statements.map((statement) => Collect(statement)).join('\n\n')
+    blockLevel -= 1
+    yield `{\n${statments}\n}`
+  }
   function* TupleTypeNode(node: ts.TupleTypeNode): IterableIterator<string> {
     const types = node.elements.map((type) => Collect(type)).join(',\n')
     yield `Type.Tuple([\n${types}\n])`
@@ -160,7 +167,7 @@ export namespace TypeScriptToTypeBox {
     yield `Type.Union([\n${types}\n])`
   }
   function* MethodSignature(node: ts.MethodSignature): IterableIterator<string> {
-    const parameters = node.parameters.map((parameter) => parameter.dotDotDotToken !== undefined ? `...Type.Rest(${Collect(parameter)})` : Collect(parameter)).join(', ')
+    const parameters = node.parameters.map((parameter) => (parameter.dotDotDotToken !== undefined ? `...Type.Rest(${Collect(parameter)})` : Collect(parameter))).join(', ')
     const returnType = node.type === undefined ? `Type.Unknown()` : Collect(node.type)
     yield `${node.name.getText()}: Type.Function([${parameters}], ${returnType})`
   }
@@ -200,7 +207,7 @@ export namespace TypeScriptToTypeBox {
     yield Collect(node.type)
   }
   function* FunctionTypeNode(node: ts.FunctionTypeNode): IterableIterator<string> {
-    const parameters = node.parameters.map((parameter) => parameter.dotDotDotToken !== undefined ? `...Type.Rest(${Collect(parameter)})` : Collect(parameter)).join(', ')
+    const parameters = node.parameters.map((parameter) => (parameter.dotDotDotToken !== undefined ? `...Type.Rest(${Collect(parameter)})` : Collect(parameter))).join(', ')
     const returns = Collect(node.type)
     yield `Type.Function([${parameters}], ${returns})`
   }
@@ -386,6 +393,7 @@ export namespace TypeScriptToTypeBox {
   function* Visit(node: ts.Node | undefined): IterableIterator<string> {
     if (node === undefined) return
     if (ts.isArrayTypeNode(node)) return yield* ArrayTypeNode(node)
+    if (ts.isBlock(node)) return yield* Block(node)
     if (ts.isClassDeclaration(node)) return yield* ClassDeclaration(node)
     if (ts.isConditionalTypeNode(node)) return yield* ConditionalTypeNode(node)
     if (ts.isConstructorTypeNode(node)) return yield* ConstructorTypeNode(node)
@@ -466,6 +474,7 @@ export namespace TypeScriptToTypeBox {
     useImports = false
     useGenerics = false
     useTypeClone = false
+    blockLevel = 0
     const source = ts.createSourceFile('types.ts', typescriptCode, ts.ScriptTarget.ESNext, true)
     const declarations = Formatter.Format([...Visit(source)].join('\n\n'))
     const imports = ImportStatement(options)
