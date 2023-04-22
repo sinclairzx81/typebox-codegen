@@ -109,6 +109,13 @@ export namespace TypeScriptToTypeBox {
   // ------------------------------------------------------------------------------------------------------------
   // Identifiers
   // ------------------------------------------------------------------------------------------------------------
+  function ResolveIdentifier(node: ts.InterfaceDeclaration | ts.TypeAliasDeclaration) {
+    function* resolve(node: ts.Node): IterableIterator<string> {
+      if (node.parent) yield* resolve(node.parent)
+      if (ts.isModuleDeclaration(node)) yield node.name.getText()
+    }
+    return [...resolve(node), node.name.getText()].join('.')
+  }
   // Note: This function is only called when 'useIdentifiers' is true. What we're trying to achieve with
   // identifier injection is a referential type model over the default inline model. For the purposes of
   // code generation, we tend to prefer referential types as these can be both inlined or referenced in
@@ -119,12 +126,12 @@ export namespace TypeScriptToTypeBox {
     // indexer type
     if (type.lastIndexOf(']') === type.length - 1) useTypeClone = true
     if (type.lastIndexOf(']') === type.length - 1) return `TypeClone.Clone(${type}, { $id: '${$id}' })`
-
     // referenced type
     if (type.indexOf('(') === -1) return `Type.Ref(${type}, { $id: '${$id}' })`
     if (type.lastIndexOf('()') === type.length - 2) return type.slice(0, type.length - 1) + `{ $id: '${$id}' })`
     if (type.lastIndexOf('})') === type.length - 2) return type.slice(0, type.length - 1) + `, { $id: '${$id}' })`
     if (type.lastIndexOf('])') === type.length - 2) return type.slice(0, type.length - 1) + `, { $id: '${$id}' })`
+    if (type.lastIndexOf(')') === type.length - 1) return type.slice(0, type.length - 1) + `, { $id: '${$id}' })`
     return type
   }
   // ------------------------------------------------------------------------------------------------------------
@@ -257,7 +264,7 @@ export namespace TypeScriptToTypeBox {
       const staticDeclaration = `${exports}type ${node.name.getText()}<${constraints}> = Static<ReturnType<typeof ${node.name.getText()}<${names}>>>`
       const rawTypeExpression = IsRecursiveType(node) ? `Type.Recursive(This => Type.Object(${members}))` : `Type.Object(${members})`
       const typeExpression = heritage.length === 0 ? rawTypeExpression : `Type.Intersect([${heritage.join(', ')}, ${rawTypeExpression}])`
-      const type = InjectIdentifier(node.name.getText(), typeExpression)
+      const type = InjectIdentifier(ResolveIdentifier(node), typeExpression)
       const typeDeclaration = `${exports}const ${node.name.getText()} = <${constraints}>(${parameters}) => ${type}`
       yield `${staticDeclaration}\n${typeDeclaration}`
     } else {
@@ -266,7 +273,7 @@ export namespace TypeScriptToTypeBox {
       const staticDeclaration = `${exports}type ${node.name.getText()} = Static<typeof ${node.name.getText()}>`
       const rawTypeExpression = IsRecursiveType(node) ? `Type.Recursive(This => Type.Object(${members}))` : `Type.Object(${members})`
       const typeExpression = heritage.length === 0 ? rawTypeExpression : `Type.Intersect([${heritage.join(', ')}, ${rawTypeExpression}])`
-      const type = InjectIdentifier(node.name.getText(), typeExpression)
+      const type = InjectIdentifier(ResolveIdentifier(node), typeExpression)
       const typeDeclaration = `${exports}const ${node.name.getText()} = ${type}`
       yield `${staticDeclaration}\n${typeDeclaration}`
     }
@@ -283,21 +290,19 @@ export namespace TypeScriptToTypeBox {
       const constraints = node.typeParameters.map((param) => `${Collect(param)} extends TSchema`).join(', ')
       const parameters = node.typeParameters.map((param) => `${Collect(param)}: ${Collect(param)}`).join(', ')
       const names = node.typeParameters.map((param) => Collect(param)).join(', ')
-      const $id = node.name.getText()
       const type_0 = Collect(node.type)
       const type_1 = isRecursiveType ? `Type.Recursive(This => ${type_0})` : type_0
-      const type_2 = InjectIdentifier($id, type_1)
-      const staticDeclaration = `${exports}type ${$id}<${constraints}> = Static<ReturnType<typeof ${$id}<${names}>>>`
+      const type_2 = InjectIdentifier(ResolveIdentifier(node), type_1)
+      const staticDeclaration = `${exports}type ${node.name.getText()}<${constraints}> = Static<ReturnType<typeof ${node.name.getText()}<${names}>>>`
       const typeDeclaration = `${exports}const ${node.name.getText()} = <${constraints}>(${parameters}) => ${type_2}`
       yield `${staticDeclaration}\n${typeDeclaration}`
     } else {
       const exports = IsExport(node) ? 'export ' : ''
-      const $id = node.name.getText()
       const type_0 = Collect(node.type)
       const type_1 = isRecursiveType ? `Type.Recursive(This => ${type_0})` : type_0
-      const type_2 = InjectIdentifier($id, type_1)
-      const staticDeclaration = `${exports}type ${$id} = Static<typeof ${$id}>`
-      const typeDeclaration = `${exports}const ${$id} = ${type_2}`
+      const type_2 = InjectIdentifier(ResolveIdentifier(node), type_1)
+      const staticDeclaration = `${exports}type ${node.name.getText()} = Static<typeof ${node.name.getText()}>`
+      const typeDeclaration = `${exports}const ${node.name.getText()} = ${type_2}`
       yield `${staticDeclaration}\n${typeDeclaration}`
     }
     typeNames.add(node.name.getText())

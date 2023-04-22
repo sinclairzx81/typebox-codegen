@@ -29,14 +29,6 @@ import { TypeBoxModel } from './model'
 import * as Types from '@sinclair/typebox'
 
 // --------------------------------------------------------------------------
-// Errors
-// --------------------------------------------------------------------------
-class ModelToZodNonReferentialType extends Error {
-  constructor(message: string) {
-    super(`TypeBoxToZod: ${message}`)
-  }
-}
-// --------------------------------------------------------------------------
 // ModelToZod
 // --------------------------------------------------------------------------
 export namespace ModelToZod {
@@ -133,11 +125,11 @@ export namespace ModelToZod {
     throw Error(`TypeBoxToZod: Unreachable`)
   }
   function Ref(schema: Types.TRef) {
-    if (!reference_map.has(schema.$ref!)) throw new ModelToZodNonReferentialType(schema.$ref!)
+    if (!reference_map.has(schema.$ref!)) return UnsupportedType(schema) // throw new ModelToZodNonReferentialType(schema.$ref!)
     return schema.$ref
   }
   function This(schema: Types.TThis) {
-    if (!reference_map.has(schema.$ref!)) throw new ModelToZodNonReferentialType(schema.$ref!)
+    if (!reference_map.has(schema.$ref!)) return UnsupportedType(schema) //throw new ModelToZodNonReferentialType(schema.$ref!)
     recursive_set.add(schema.$ref)
     return schema.$ref
   }
@@ -203,7 +195,7 @@ export namespace ModelToZod {
     const output: string[] = []
     if (schema.$id === undefined) schema.$id = `T_Generated`
     for (const reference of references) {
-      if (reference.$id === undefined) throw new ModelToZodNonReferentialType(JSON.stringify(reference))
+      if (reference.$id === undefined) return UnsupportedType(schema) // throw new ModelToZodNonReferentialType(JSON.stringify(reference))
       reference_map.set(reference.$id, reference)
     }
     const type = Collect(schema)
