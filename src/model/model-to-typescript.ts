@@ -40,12 +40,12 @@ export namespace ModelToTypeScript {
     return 'boolean'
   }
   function Constructor(schema: Types.TConstructor) {
-    const params = schema.parameters.map((param) => Visit(param)).join(', ')
+    const params = schema.parameters.map((param, index) => `param${index} : ${Visit(param)}`).join(', ')
     const returns = Visit(schema.returns)
     return `new (${params}) => ${returns}`
   }
   function Function(schema: Types.TFunction) {
-    const params = schema.parameters.map((param) => Visit(param)).join(', ')
+    const params = schema.parameters.map((param, index) => `param${index} : ${Visit(param)}`).join(', ')
     const returns = Visit(schema.returns)
     return `(${params}) => ${returns}`
   }

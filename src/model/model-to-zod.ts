@@ -29,19 +29,6 @@ import { TypeBoxModel } from './model'
 import * as Types from '@sinclair/typebox'
 
 // --------------------------------------------------------------------------
-// Errors
-// --------------------------------------------------------------------------
-class ModelToZodNonReferentialType extends Error {
-  constructor(message: string) {
-    super(`TypeBoxToZod: ${message}`)
-  }
-}
-class ModelToZodUnsupportedType extends Error {
-  constructor(message: string) {
-    super(`TypeBoxToZod: ${message}`)
-  }
-}
-// --------------------------------------------------------------------------
 // ModelToZod
 // --------------------------------------------------------------------------
 export namespace ModelToZod {
@@ -56,7 +43,7 @@ export namespace ModelToZod {
     return `z.boolean()`
   }
   function Constructor(schema: Types.TConstructor): string {
-    throw new ModelToZodUnsupportedType(`TConstructor`)
+    return UnsupportedType(schema)
   }
   function Function(schema: Types.TFunction) {
     const params = schema.parameters.map((param) => Visit(param)).join(`, `)
@@ -130,7 +117,7 @@ export namespace ModelToZod {
     for (const [key, value] of globalThis.Object.entries(schema.patternProperties)) {
       const type = Visit(value)
       if (key === `^(0|[1-9][0-9]*)$`) {
-        throw new ModelToZodUnsupportedType(`TRecord<TNumber, TUnknown>`)
+        return `z.record(z.number(), ${type})`
       } else {
         return `z.record(${type})`
       }
@@ -138,11 +125,11 @@ export namespace ModelToZod {
     throw Error(`TypeBoxToZod: Unreachable`)
   }
   function Ref(schema: Types.TRef) {
-    if (!reference_map.has(schema.$ref!)) throw new ModelToZodNonReferentialType(schema.$ref!)
+    if (!reference_map.has(schema.$ref!)) return UnsupportedType(schema) // throw new ModelToZodNonReferentialType(schema.$ref!)
     return schema.$ref
   }
   function This(schema: Types.TThis) {
-    if (!reference_map.has(schema.$ref!)) throw new ModelToZodNonReferentialType(schema.$ref!)
+    if (!reference_map.has(schema.$ref!)) return UnsupportedType(schema) //throw new ModelToZodNonReferentialType(schema.$ref!)
     recursive_set.add(schema.$ref)
     return schema.$ref
   }
@@ -155,7 +142,7 @@ export namespace ModelToZod {
     return `z.string().regex(new RegExp('${schema.pattern}'))`
   }
   function UInt8Array(schema: Types.TUint8Array): string {
-    throw new ModelToZodUnsupportedType(`TUint8Array`)
+    return `z.instanceof(Uint8Array)`
   }
   function Undefined(schema: Types.TUndefined) {
     return `z.undefined()`
@@ -208,7 +195,7 @@ export namespace ModelToZod {
     const output: string[] = []
     if (schema.$id === undefined) schema.$id = `T_Generated`
     for (const reference of references) {
-      if (reference.$id === undefined) throw new ModelToZodNonReferentialType(JSON.stringify(reference))
+      if (reference.$id === undefined) return UnsupportedType(schema) // throw new ModelToZodNonReferentialType(JSON.stringify(reference))
       reference_map.set(reference.$id, reference)
     }
     const type = Collect(schema)
