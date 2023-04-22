@@ -36,11 +36,6 @@ class ModelToZodNonReferentialType extends Error {
     super(`TypeBoxToZod: ${message}`)
   }
 }
-class ModelToZodUnsupportedType extends Error {
-  constructor(message: string) {
-    super(`TypeBoxToZod: ${message}`)
-  }
-}
 // --------------------------------------------------------------------------
 // ModelToZod
 // --------------------------------------------------------------------------
@@ -56,7 +51,7 @@ export namespace ModelToZod {
     return `z.boolean()`
   }
   function Constructor(schema: Types.TConstructor): string {
-    throw new ModelToZodUnsupportedType(`TConstructor`)
+    return UnsupportedType(schema)
   }
   function Function(schema: Types.TFunction) {
     const params = schema.parameters.map((param) => Visit(param)).join(`, `)
@@ -130,7 +125,7 @@ export namespace ModelToZod {
     for (const [key, value] of globalThis.Object.entries(schema.patternProperties)) {
       const type = Visit(value)
       if (key === `^(0|[1-9][0-9]*)$`) {
-        throw new ModelToZodUnsupportedType(`TRecord<TNumber, TUnknown>`)
+        return `z.record(z.number(), ${type})`
       } else {
         return `z.record(${type})`
       }
@@ -155,7 +150,7 @@ export namespace ModelToZod {
     return `z.string().regex(new RegExp('${schema.pattern}'))`
   }
   function UInt8Array(schema: Types.TUint8Array): string {
-    throw new ModelToZodUnsupportedType(`TUint8Array`)
+    return `z.instanceof(Uint8Array)`
   }
   function Undefined(schema: Types.TUndefined) {
     return `z.undefined()`

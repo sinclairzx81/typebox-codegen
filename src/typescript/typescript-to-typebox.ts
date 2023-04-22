@@ -160,7 +160,7 @@ export namespace TypeScriptToTypeBox {
     yield `Type.Union([\n${types}\n])`
   }
   function* MethodSignature(node: ts.MethodSignature): IterableIterator<string> {
-    const parameters = node.parameters.map((parameter) => Collect(parameter)).join(', ')
+    const parameters = node.parameters.map((parameter) => parameter.dotDotDotToken !== undefined ? `...Type.Rest(${Collect(parameter)})` : Collect(parameter)).join(', ')
     const returnType = node.type === undefined ? `Type.Unknown()` : Collect(node.type)
     yield `${node.name.getText()}: Type.Function([${parameters}], ${returnType})`
   }
@@ -200,7 +200,7 @@ export namespace TypeScriptToTypeBox {
     yield Collect(node.type)
   }
   function* FunctionTypeNode(node: ts.FunctionTypeNode): IterableIterator<string> {
-    const parameters = node.parameters.map((param) => Collect(param)).join(', ')
+    const parameters = node.parameters.map((parameter) => parameter.dotDotDotToken !== undefined ? `...Type.Rest(${Collect(parameter)})` : Collect(parameter)).join(', ')
     const returns = Collect(node.type)
     yield `Type.Function([${parameters}], ${returns})`
   }

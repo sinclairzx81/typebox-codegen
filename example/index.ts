@@ -14,6 +14,11 @@ const Code = `
   type A = [0, 1]
   type B = [2, 3]
   type C = [...A, ...B]
+
+  type F1 = new (x: C) => void
+  type F2 = (...x: C) => void
+  type F3 = (x: [...A, ...B]) => void
+  type F4 = (...x: [...A, ...B]) => void
 `
 // ----------------------------------------------------------------------------
 // Immediate Transform
