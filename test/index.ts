@@ -1,2 +1,2 @@
 import './model'
-import './typescript2typebox'
+import './ts2typebox'
