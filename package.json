@@ -28,7 +28,7 @@
     "@types/prettier": "^2.7.2"
   },
   "dependencies": {
-    "@sinclair/typebox": "^0.28.5",
+    "@sinclair/typebox": "^0.28.6",
     "prettier": "^2.8.7",
     "typescript": "^5.0.4"
   },
