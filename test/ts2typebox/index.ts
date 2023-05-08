@@ -369,7 +369,6 @@ describe('ts2typebox - Typescript to Typebox', () => {
 
     type T = A["a"];
     `)
-    console.log(generatedTypebox)
     const expectedResult = `
     import { Type, Static } from "@sinclair/typebox";
 
