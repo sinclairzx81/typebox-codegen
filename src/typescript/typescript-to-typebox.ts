@@ -26,6 +26,7 @@ THE SOFTWARE.
 
 import { Formatter } from '../common/index'
 import * as ts from 'typescript'
+import { addOptionsToType, generateOptionsBasedOnJsDocOfNode } from './jsdoc-to-typebox'
 
 export class TypeScriptToTypeBoxError extends Error {
   constructor(public readonly diagnostics: ts.Diagnostic[]) {
@@ -280,8 +281,10 @@ export namespace TypeScriptToTypeBox {
     typeNames.add(node.name.getText())
     recursiveDeclaration = null
   }
+
   function* TypeAliasDeclaration(node: ts.TypeAliasDeclaration): IterableIterator<string> {
     useImports = true
+    const jsonSchemaOptions = generateOptionsBasedOnJsDocOfNode(node)
     const isRecursiveType = IsRecursiveType(node)
     if (isRecursiveType) recursiveDeclaration = node
     if (node.typeParameters) {
@@ -302,7 +305,7 @@ export namespace TypeScriptToTypeBox {
       const type_1 = isRecursiveType ? `Type.Recursive(This => ${type_0})` : type_0
       const type_2 = InjectIdentifier(ResolveIdentifier(node), type_1)
       const staticDeclaration = `${exports}type ${node.name.getText()} = Static<typeof ${node.name.getText()}>`
-      const typeDeclaration = `${exports}const ${node.name.getText()} = ${type_2}`
+      const typeDeclaration = `${exports}const ${node.name.getText()} = ${addOptionsToType(type_2, jsonSchemaOptions)}`
       yield `${staticDeclaration}\n${typeDeclaration}`
     }
     typeNames.add(node.name.getText())
