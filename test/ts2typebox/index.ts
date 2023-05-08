@@ -361,26 +361,26 @@ describe('ts2typebox - Typescript to Typebox', () => {
     `
     expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
   })
-  // TODO: fix indexed access type generation.
-  // test('Indexed Access', () => {
-  //   const generatedTypebox = TypeScriptToTypeBox.Generate(`
-  //   type A = {
-  //     a: number;
-  //   };
-  //
-  //   type T = A["a"];
-  //   `)
-  //   const expectedResult = `
-  //   import { Type, Static } from "@sinclair/typebox";
-  //
-  //   type A = Static<typeof A>;
-  //   const A = Type.Object({
-  //     a: Type.Number(),
-  //   });
-  //
-  //   type T = Static<typeof T>;
-  //   const T = Type.Number();
-  //   `
-  //   expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
-  // })
+  test('Indexed Access', () => {
+    const generatedTypebox = TypeScriptToTypeBox.Generate(`
+    type A = {
+      a: number;
+    };
+
+    type T = A["a"];
+    `)
+    console.log(generatedTypebox)
+    const expectedResult = `
+    import { Type, Static } from "@sinclair/typebox";
+
+    type A = Static<typeof A>;
+    const A = Type.Object({
+      a: Type.Number(),
+    });
+
+    type T = Static<typeof T>;
+    const T = Type.Index(A, Type.Literal("a"));
+    `
+    expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
+  })
 })
