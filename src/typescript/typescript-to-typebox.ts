@@ -24,7 +24,6 @@ THE SOFTWARE.
 
 ---------------------------------------------------------------------------*/
 
-import { Formatter } from '../common/index'
 import * as ts from 'typescript'
 import { addOptionsToType, generateOptionsBasedOnJsDocOfNode } from './jsdoc-to-typebox'
 
@@ -76,7 +75,7 @@ export namespace TypeScriptToTypeBox {
   let blockLevel: number = 0
   // (auto) tracked for injecting typebox import statements
   let useImports = false
-  // (auto) tracked for injecting typebox import statements
+  // (auto) tracked for injecting JSON schema optios
   let useOptions = false
   // (auto) tracked for injecting TSchema import statements
   let useGenerics = false
@@ -149,6 +148,7 @@ export namespace TypeScriptToTypeBox {
   function* PropertySignature(node: ts.PropertySignature): IterableIterator<string> {
     const [readonly, optional] = [IsReadonlyProperty(node), IsOptionalProperty(node)]
     const type = Collect(node.type)
+    const jsonSchemaOptions = generateOptionsBasedOnJsDocOfNode(node)
     if (readonly && optional) {
       return yield `${node.name.getText()}: Type.ReadonlyOptional(${type})`
     } else if (readonly) {
@@ -156,7 +156,7 @@ export namespace TypeScriptToTypeBox {
     } else if (optional) {
       return yield `${node.name.getText()}: Type.Optional(${type})`
     } else {
-      return yield `${node.name.getText()}: ${type}`
+      return yield `${node.name.getText()}: ${addOptionsToType(type, jsonSchemaOptions)}`
     }
   }
   function* ArrayTypeNode(node: ts.ArrayTypeNode): IterableIterator<string> {
@@ -491,7 +491,7 @@ export namespace TypeScriptToTypeBox {
     useTypeClone = false
     blockLevel = 0
     const source = ts.createSourceFile('types.ts', typescriptCode, ts.ScriptTarget.ESNext, true)
-    const declarations = Formatter.Format([...Visit(source)].join('\n\n'))
+    const declarations = [...Visit(source)].join('\n\n')
     const imports = ImportStatement(options)
     const typescript = [imports, '', declarations].join('\n')
     const assertion = ts.transpileModule(typescript, transpilerOptions)

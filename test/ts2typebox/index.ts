@@ -383,104 +383,64 @@ describe('ts2typebox - Typescript to Typebox', () => {
     expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
   })
   describe('jsdoc to JSON schema options', () => {
-    describe('number', () => {
-      test('minimum - TypeAliasDeclaration', () => {
-        const generatedTypebox = TypeScriptToTypeBox.Generate(`
+    test('type', () => {
+      const generatedTypebox = TypeScriptToTypeBox.Generate(`
         /**
-         * @minimum 4
-         */
-        type X = number;
-        `)
-        const expectedResult = `
-        import { Type, Static } from "@sinclair/typebox";
-
-        type X = Static<typeof X>;
-        const X = Type.Number({ minimum: 4 });
-        `
-        expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
-      })
-      // TODO: implement when node is InterfaceDeclaration
-      describe.todo('implement for interfacedeclarations as well')
-      // test('minimum - InterfaceDeclaration', () => {
-      //   return true
-      // })
-      test('maximum', () => {
-        const generatedTypebox = TypeScriptToTypeBox.Generate(`
-        /**
-         * @maximum 4
-         */
-        type X = number;
-        `)
-        const expectedResult = `
-        import { Type, Static } from "@sinclair/typebox";
-
-        type X = Static<typeof X>;
-        const X = Type.Number({ maximum: 4 });
-        `
-        expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
-      })
-      test('exclusiveMaximum', () => {
-        const generatedTypebox = TypeScriptToTypeBox.Generate(`
-        /**
-         * @exclusiveMaximum 4
-         */
-        type X = number;
-        `)
-        const expectedResult = `
-        import { Type, Static } from "@sinclair/typebox";
-
-        type X = Static<typeof X>;
-        const X = Type.Number({ exclusiveMaximum: 4 });
-        `
-        expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
-      })
-      test('exclusiveMinimum', () => {
-        const generatedTypebox = TypeScriptToTypeBox.Generate(`
-        /**
-         * @exclusiveMinimum 4
-         */
-        type X = number;
-        `)
-        const expectedResult = `
-        import { Type, Static } from "@sinclair/typebox";
-
-        type X = Static<typeof X>;
-        const X = Type.Number({ exclusiveMinimum: 4 });
-        `
-        expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
-      })
-      test('multipleOf', () => {
-        const generatedTypebox = TypeScriptToTypeBox.Generate(`
-        /**
-         * @multipleOf 4
-         */
-        type X = number;
-        `)
-        const expectedResult = `
-        import { Type, Static } from "@sinclair/typebox";
-
-        type X = Static<typeof X>;
-        const X = Type.Number({ multipleOf: 4 });
-        `
-        expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
-      })
-      test('multiple jsdoc comments', () => {
-        const generatedTypebox = TypeScriptToTypeBox.Generate(`
-        /**
-         * @minimum 2
-         * @maximum 8
+         * @minimum 100
+         * @maximum 200
          * @multipleOf 2
+         * @default 150
+         * @description "it's a number" - strings must be quoted
+         * @foobar "should support unknown props"
          */
-        type X = number;
+        type T = number;
+        }
         `)
-        const expectedResult = `
+      const expectedResult = `
         import { Type, Static } from "@sinclair/typebox";
 
-        type X = Static<typeof X>;
-        const X = Type.Number({ minimum: 2, maximum: 8, multipleOf: 2 });
+        type T = Static<typeof T>;
+        const T = Type.Number({
+            minimum: 100,
+            maximum: 200,
+            multipleOf: 2,
+            default: 150,
+            description: "it's a number",
+            foobar: "should support unknown props",
+        });
         `
-        expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
-      })
+      expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
+    })
+    test('interface', () => {
+      const generatedTypebox = TypeScriptToTypeBox.Generate(`
+        interface T {
+          /**
+           * @minimum 100
+           * @maximum 200
+           * @multipleOf 2
+           * @default 150
+           * @description "it's a number" - strings must be quoted
+           * @foobar "should support unknown props"
+           */
+          x: number;
+        }
+        `)
+      const expectedResult = `
+        import { Type, Static } from "@sinclair/typebox";
+
+        type T = Static<typeof T>;
+        const T = Type.Object({
+          x: Type.Number({
+            minimum: 100,
+            maximum: 200,
+            multipleOf: 2,
+            default: 150,
+            description: "it's a number",
+            foobar: "should support unknown props",
+          }),
+        });
+        `
+      expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
     })
   })
 })
