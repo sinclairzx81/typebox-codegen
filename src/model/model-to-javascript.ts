@@ -26,12 +26,13 @@ THE SOFTWARE.
 
 import { TypeBoxModel } from './model'
 import { Formatter } from '../common/formatter'
+import { TypeCompiler } from '@sinclair/typebox/compiler'
 
-export namespace ModelToJsonSchema {
+export namespace ModelToJavaScript {
   export function Generate(model: TypeBoxModel): string {
     const definitions: string[] = []
     for (const type of model.types) {
-      definitions.push(`export const ${type.$id!} = ${JSON.stringify(type)}`)
+      definitions.push(`export const ${type.$id!} = (function() { ${TypeCompiler.Code(type)} })();`)
     }
     return Formatter.Format(definitions.join('\n\n'))
   }

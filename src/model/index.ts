@@ -24,6 +24,7 @@ THE SOFTWARE.
 
 ---------------------------------------------------------------------------*/
 
+export * from './model-to-javascript'
 export * from './model-to-json-schema'
 export * from './model-to-typebox'
 export * from './model-to-typescript'

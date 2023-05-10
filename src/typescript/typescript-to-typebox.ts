@@ -76,6 +76,8 @@ export namespace TypeScriptToTypeBox {
   let blockLevel: number = 0
   // (auto) tracked for injecting typebox import statements
   let useImports = false
+  // (auto) tracked for injecting typebox import statements
+  let useOptions = false
   // (auto) tracked for injecting TSchema import statements
   let useGenerics = false
   // (auto) tracked for cases where composition requires deep clone
@@ -122,17 +124,18 @@ export namespace TypeScriptToTypeBox {
   // code generation, we tend to prefer referential types as these can be both inlined or referenced in
   // the codegen target; and where different targets may have different referential requirements. It
   // should be possible to implement a more robust injection mechanism however. For review.
-  function InjectIdentifier($id: string, type: string) {
+  function InjectIdentifier($id: string, type: string, useOptions: boolean) {
+    const options = useOptions ? `{ $id: '${$id}', ...options }` : `{ $id: '${$id}' }`
     if (!useIdentifiers) return type
     // indexer type
     if (type.lastIndexOf(']') === type.length - 1) useTypeClone = true
-    if (type.lastIndexOf(']') === type.length - 1) return `TypeClone.Clone(${type}, { $id: '${$id}' })`
+    if (type.lastIndexOf(']') === type.length - 1) return `TypeClone.Clone(${type}, ${options})`
     // referenced type
-    if (type.indexOf('(') === -1) return `Type.Ref(${type}, { $id: '${$id}' })`
-    if (type.lastIndexOf('()') === type.length - 2) return type.slice(0, type.length - 1) + `{ $id: '${$id}' })`
-    if (type.lastIndexOf('})') === type.length - 2) return type.slice(0, type.length - 1) + `, { $id: '${$id}' })`
-    if (type.lastIndexOf('])') === type.length - 2) return type.slice(0, type.length - 1) + `, { $id: '${$id}' })`
-    if (type.lastIndexOf(')') === type.length - 1) return type.slice(0, type.length - 1) + `, { $id: '${$id}' })`
+    if (type.indexOf('(') === -1) return `Type.Ref(${type}, ${options})`
+    if (type.lastIndexOf('()') === type.length - 2) return type.slice(0, type.length - 1) + `${options})`
+    if (type.lastIndexOf('})') === type.length - 2) return type.slice(0, type.length - 1) + `, ${options})`
+    if (type.lastIndexOf('])') === type.length - 2) return type.slice(0, type.length - 1) + `, ${options})`
+    if (type.lastIndexOf(')') === type.length - 1) return type.slice(0, type.length - 1) + `, ${options})`
     return type
   }
   // ------------------------------------------------------------------------------------------------------------
@@ -265,8 +268,10 @@ export namespace TypeScriptToTypeBox {
       const staticDeclaration = `${exports}type ${node.name.getText()}<${constraints}> = Static<ReturnType<typeof ${node.name.getText()}<${names}>>>`
       const rawTypeExpression = IsRecursiveType(node) ? `Type.Recursive(This => Type.Object(${members}))` : `Type.Object(${members})`
       const typeExpression = heritage.length === 0 ? rawTypeExpression : `Type.Intersect([${heritage.join(', ')}, ${rawTypeExpression}])`
-      const type = InjectIdentifier(ResolveIdentifier(node), typeExpression)
-      const typeDeclaration = `${exports}const ${node.name.getText()} = <${constraints}>(${parameters}) => ${type}`
+      const type = InjectIdentifier(ResolveIdentifier(node), typeExpression, true && useIdentifiers)
+      const options = true && useIdentifiers ? ', options: SchemaOptions = {}' : ''
+      useOptions = useOptions || (true && useIdentifiers) // todo: refactor this
+      const typeDeclaration = `${exports}const ${node.name.getText()} = <${constraints}>(${parameters}${options}) => ${type}`
       yield `${staticDeclaration}\n${typeDeclaration}`
     } else {
       const exports = IsExport(node) ? 'export ' : ''
@@ -274,7 +279,7 @@ export namespace TypeScriptToTypeBox {
       const staticDeclaration = `${exports}type ${node.name.getText()} = Static<typeof ${node.name.getText()}>`
       const rawTypeExpression = IsRecursiveType(node) ? `Type.Recursive(This => Type.Object(${members}))` : `Type.Object(${members})`
       const typeExpression = heritage.length === 0 ? rawTypeExpression : `Type.Intersect([${heritage.join(', ')}, ${rawTypeExpression}])`
-      const type = InjectIdentifier(ResolveIdentifier(node), typeExpression)
+      const type = InjectIdentifier(ResolveIdentifier(node), typeExpression, false)
       const typeDeclaration = `${exports}const ${node.name.getText()} = ${type}`
       yield `${staticDeclaration}\n${typeDeclaration}`
     }
@@ -295,15 +300,17 @@ export namespace TypeScriptToTypeBox {
       const names = node.typeParameters.map((param) => Collect(param)).join(', ')
       const type_0 = Collect(node.type)
       const type_1 = isRecursiveType ? `Type.Recursive(This => ${type_0})` : type_0
-      const type_2 = InjectIdentifier(ResolveIdentifier(node), type_1)
+      const type_2 = InjectIdentifier(ResolveIdentifier(node), type_1, true && useIdentifiers)
+      const options = true && useIdentifiers ? ', options: SchemaOptions = {}' : ''
+      useOptions = useOptions || (true && useIdentifiers) // todo: refactor this
       const staticDeclaration = `${exports}type ${node.name.getText()}<${constraints}> = Static<ReturnType<typeof ${node.name.getText()}<${names}>>>`
-      const typeDeclaration = `${exports}const ${node.name.getText()} = <${constraints}>(${parameters}) => ${type_2}`
+      const typeDeclaration = `${exports}const ${node.name.getText()} = <${constraints}>(${parameters}${options}) => ${type_2}`
       yield `${staticDeclaration}\n${typeDeclaration}`
     } else {
       const exports = IsExport(node) ? 'export ' : ''
       const type_0 = Collect(node.type)
       const type_1 = isRecursiveType ? `Type.Recursive(This => ${type_0})` : type_0
-      const type_2 = InjectIdentifier(ResolveIdentifier(node), type_1)
+      const type_2 = InjectIdentifier(ResolveIdentifier(node), type_1, false)
       const staticDeclaration = `${exports}type ${node.name.getText()} = Static<typeof ${node.name.getText()}>`
       const typeDeclaration = `${exports}const ${node.name.getText()} = ${addOptionsToType(type_2, jsonSchemaOptions)}`
       yield `${staticDeclaration}\n${typeDeclaration}`
@@ -458,15 +465,14 @@ export namespace TypeScriptToTypeBox {
     }
     console.warn('Unhandled:', ts.SyntaxKind[node.kind], node.getText())
   }
-
   export function ImportStatement(options: TypeScriptToTypeBoxOptions): string {
     if (!(useImports && options.useTypeBoxImport)) return ''
     const imported = ['Type', 'Static']
     if (useGenerics) imported.push('TSchema')
+    if (useOptions) imported.push('SchemaOptions')
     if (useTypeClone) imported.push('TypeClone')
     return `import { ${imported.join(', ')} } from '@sinclair/typebox'`
   }
-
   /** Generates TypeBox types from TypeScript interface and type definitions */
   export function Generate(
     typescriptCode: string,
@@ -480,6 +486,7 @@ export namespace TypeScriptToTypeBox {
     useIdentifiers = options.useIdentifiers
     typeNames.clear()
     useImports = false
+    useOptions = false
     useGenerics = false
     useTypeClone = false
     blockLevel = 0
