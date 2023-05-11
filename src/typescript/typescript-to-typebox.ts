@@ -148,7 +148,6 @@ export namespace TypeScriptToTypeBox {
   function* PropertySignature(node: ts.PropertySignature): IterableIterator<string> {
     const [readonly, optional] = [IsReadonlyProperty(node), IsOptionalProperty(node)]
     const type = Collect(node.type)
-    const jsonSchemaOptions = generateOptionsBasedOnJsDocOfNode(node)
     if (readonly && optional) {
       return yield `${node.name.getText()}: Type.ReadonlyOptional(${type})`
     } else if (readonly) {
@@ -156,12 +155,15 @@ export namespace TypeScriptToTypeBox {
     } else if (optional) {
       return yield `${node.name.getText()}: Type.Optional(${type})`
     } else {
-      return yield `${node.name.getText()}: ${addOptionsToType(type, jsonSchemaOptions)}`
+      return yield `${node.name.getText()}: ${type}`
     }
   }
   function* ArrayTypeNode(node: ts.ArrayTypeNode): IterableIterator<string> {
+    const arrayJsonSchemaOptions = schemaOptions.pop()
     const type = Collect(node.elementType)
-    yield `Type.Array(${type})`
+    const arrayTypeWithoutOptions = `Type.Array(${type})`
+    // yield arrayTypeWithoutOptions;
+    yield arrayJsonSchemaOptions === undefined ? arrayTypeWithoutOptions : addOptionsToType(arrayTypeWithoutOptions, arrayJsonSchemaOptions)
   }
   function* Block(node: ts.Block): IterableIterator<string> {
     blockLevel += 1
@@ -173,9 +175,14 @@ export namespace TypeScriptToTypeBox {
     const types = node.elements.map((type) => Collect(type)).join(',\n')
     yield `Type.Tuple([\n${types}\n])`
   }
+  // TODO: I don't know to much about unions in JSON schema. Are there even
+  // options that can be passed to unions? Or should we drop this and simply pop
+  // the schemaOptions?
   function* UnionTypeNode(node: ts.UnionTypeNode): IterableIterator<string> {
+    const unionJsonSchemaOptions = schemaOptions.pop()
     const types = node.types.map((type) => Collect(type)).join(',\n')
-    yield `Type.Union([\n${types}\n])`
+    const unionWithoutOptions = `Type.Union([\n${types}\n])`
+    yield unionJsonSchemaOptions === undefined ? unionWithoutOptions : addOptionsToType(unionWithoutOptions, unionJsonSchemaOptions)
   }
   function* MethodSignature(node: ts.MethodSignature): IterableIterator<string> {
     const parameters = node.parameters.map((parameter) => (parameter.dotDotDotToken !== undefined ? `...Type.Rest(${Collect(parameter)})` : Collect(parameter))).join(', ')
@@ -211,7 +218,7 @@ export namespace TypeScriptToTypeBox {
       yield `Type.KeyOf(${type})`
     }
     if (node.operator === ts.SyntaxKind.ReadonlyKeyword) {
-      yield Collect(node.type)
+      yield `Type.Readonly(${Collect(node.type)})`
     }
   }
   function* Parameter(node: ts.ParameterDeclaration): IterableIterator<string> {
@@ -255,6 +262,7 @@ export namespace TypeScriptToTypeBox {
   }
   function* InterfaceDeclaration(node: ts.InterfaceDeclaration): IterableIterator<string> {
     useImports = true
+    const jsonSchemaOptions = generateOptionsBasedOnJsDocOfNode(node)
     const isRecursiveType = IsRecursiveType(node)
     if (isRecursiveType) recursiveDeclaration = node
     const heritage = node.heritageClauses !== undefined ? node.heritageClauses.flatMap((node) => Collect(node)) : []
@@ -275,6 +283,7 @@ export namespace TypeScriptToTypeBox {
       yield `${staticDeclaration}\n${typeDeclaration}`
     } else {
       const exports = IsExport(node) ? 'export ' : ''
+      schemaOptions.push(jsonSchemaOptions)
       const members = PropertiesFromTypeElementArray(node.members)
       const staticDeclaration = `${exports}type ${node.name.getText()} = Static<typeof ${node.name.getText()}>`
       const rawTypeExpression = IsRecursiveType(node) ? `Type.Recursive(This => Type.Object(${members}))` : `Type.Object(${members})`
@@ -287,11 +296,14 @@ export namespace TypeScriptToTypeBox {
     recursiveDeclaration = null
   }
 
+  let schemaOptions: Record<any, any>[] = []
+
   function* TypeAliasDeclaration(node: ts.TypeAliasDeclaration): IterableIterator<string> {
     useImports = true
     const jsonSchemaOptions = generateOptionsBasedOnJsDocOfNode(node)
     const isRecursiveType = IsRecursiveType(node)
     if (isRecursiveType) recursiveDeclaration = node
+    // Generics case
     if (node.typeParameters) {
       useGenerics = true
       const exports = IsExport(node) ? 'export ' : ''
@@ -308,11 +320,12 @@ export namespace TypeScriptToTypeBox {
       yield `${staticDeclaration}\n${typeDeclaration}`
     } else {
       const exports = IsExport(node) ? 'export ' : ''
+      schemaOptions.push(jsonSchemaOptions)
       const type_0 = Collect(node.type)
       const type_1 = isRecursiveType ? `Type.Recursive(This => ${type_0})` : type_0
       const type_2 = InjectIdentifier(ResolveIdentifier(node), type_1, false)
       const staticDeclaration = `${exports}type ${node.name.getText()} = Static<typeof ${node.name.getText()}>`
-      const typeDeclaration = `${exports}const ${node.name.getText()} = ${addOptionsToType(type_2, jsonSchemaOptions)}`
+      const typeDeclaration = `${exports}const ${node.name.getText()} = ${type_2}`
       yield `${staticDeclaration}\n${typeDeclaration}`
     }
     typeNames.add(node.name.getText())
@@ -445,9 +458,24 @@ export namespace TypeScriptToTypeBox {
     if (ts.isSourceFile(node)) return yield* SourceFile(node)
     if (node.kind === ts.SyntaxKind.ExportKeyword) return yield `export`
     if (node.kind === ts.SyntaxKind.KeyOfKeyword) return yield `Type.KeyOf()`
-    if (node.kind === ts.SyntaxKind.NumberKeyword) return yield `Type.Number()`
+    if (node.kind === ts.SyntaxKind.NumberKeyword) {
+      const jsonSchemaOptions = schemaOptions.pop()
+      if (jsonSchemaOptions === undefined || Object.keys(jsonSchemaOptions).length === 0) {
+        return yield `Type.Number()`
+      }
+      return yield `Type.Number(${JSON.stringify(jsonSchemaOptions)})`
+    }
+    // TODO: Probably add function to add types correctly here (also for
+    // boolean) probably need more knowledge of json schema to know which types
+    // even should get options here!
     if (node.kind === ts.SyntaxKind.BigIntKeyword) return yield `Type.BigInt()`
-    if (node.kind === ts.SyntaxKind.StringKeyword) return yield `Type.String()`
+    if (node.kind === ts.SyntaxKind.StringKeyword) {
+      const jsonSchemaOptions = schemaOptions.pop()
+      if (jsonSchemaOptions === undefined || Object.keys(jsonSchemaOptions).length === 0) {
+        return yield `Type.String()`
+      }
+      return yield `Type.String(${JSON.stringify(jsonSchemaOptions)})`
+    }
     if (node.kind === ts.SyntaxKind.SymbolKeyword) return yield `Type.Symbol()`
     if (node.kind === ts.SyntaxKind.BooleanKeyword) return yield `Type.Boolean()`
     if (node.kind === ts.SyntaxKind.UndefinedKeyword) return yield `Type.Undefined()`

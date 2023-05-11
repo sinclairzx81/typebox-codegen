@@ -5,7 +5,7 @@
 import * as ts from 'typescript'
 import * as doctrine from 'doctrine'
 
-const getJsDocStringFromNode = (node: ts.TypeAliasDeclaration | ts.PropertySignature): string[] => {
+const getJsDocStringFromNode = (node: ts.TypeAliasDeclaration | ts.PropertySignature | ts.InterfaceDeclaration): string[] => {
   const regexToGetComments = /\/\*\*([\s\S]*?)\*\//
   const match = node.getFullText().match(regexToGetComments)
   if (match !== undefined && match !== null) {
@@ -32,7 +32,7 @@ const generateOptionsForNode = (tags: doctrine.Tag[], transform: (val: number | 
  * Generates an object containing valid JSON schema options for the given node
  * based on the given jsdoc ast.
  **/
-export const generateOptionsBasedOnJsDocOfNode = (node: ts.TypeAliasDeclaration | ts.PropertySignature) => {
+export const generateOptionsBasedOnJsDocOfNode = (node: ts.TypeAliasDeclaration | ts.PropertySignature | ts.InterfaceDeclaration) => {
   const jsDocStrings = getJsDocStringFromNode(node)
   const tags = jsDocStrings.flatMap(astTagsFromJsDoc)
   return generateOptionsForNode(tags, (val) => {
@@ -45,7 +45,7 @@ export const generateOptionsBasedOnJsDocOfNode = (node: ts.TypeAliasDeclaration 
         return BigInt(val)
       }
       // string
-      // TODO: should we also allow quoted strings via 'test here'?
+      // TODO: also allow quoted strings via 'test here'?
       if (val.startsWith('"')) {
         const valAfterFirstQuote = val.slice(1)
         // does it contain another (closing) '"'?
@@ -65,12 +65,25 @@ export const generateOptionsBasedOnJsDocOfNode = (node: ts.TypeAliasDeclaration 
  * Adds given JSON schema options to the string representation of the given
  * type.
  **/
-export const addOptionsToType = (typeAsString: string, options: Record<any, any>) => {
-  if (Object.keys(options).length === 0) {
+export const addOptionsToType = (typeAsString: string, options?: Record<any, any>) => {
+  if (options === undefined || Object.keys(options).length === 0) {
     return typeAsString
   }
+
+  // const closingParensCount = getNumberOfEndingClosingParens(typeAsString);
+
   // TODO: probably add ": SchemaOptions" here. Was mentioned in discussion, but I
   // did not find the type anywhere? Perhaps I misunderstood something?
   // src: https://github.com/sinclairzx81/typebox-codegen/discussions/13#discussioncomment-5858910
-  return `${typeAsString.slice(0, -1)}${JSON.stringify(options)})`
+  return `${typeAsString.slice(0, -1)},${JSON.stringify(options)})`
 }
+
+// const getNumberOfEndingClosingParens = (type: string) => {
+//   let currentType = type;
+//   let closingEndingParensCount = 0;
+//   while (currentType.endsWith(")")) {
+//     currentType = currentType.slice(0, -1);
+//     closingEndingParensCount = closingEndingParensCount + 1;
+//   }
+//   return closingEndingParensCount;
+// };
