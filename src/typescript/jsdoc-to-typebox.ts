@@ -45,12 +45,20 @@ export const generateOptionsBasedOnJsDocOfNode = (node: ts.TypeAliasDeclaration 
         return BigInt(val)
       }
       // string
-      // TODO: also allow quoted strings via 'test here'?
       if (val.startsWith('"')) {
         const valAfterFirstQuote = val.slice(1)
         // does it contain another (closing) '"'?
         if (valAfterFirstQuote.includes('"')) {
           const valInsideQuotes = valAfterFirstQuote.split('"')[0]
+          return valInsideQuotes
+        }
+      }
+      // string
+      if (val.startsWith("'")) {
+        const valAfterFirstQuote = val.slice(1)
+        // does it contain another (closing) '"'?
+        if (valAfterFirstQuote.includes("'")) {
+          const valInsideQuotes = valAfterFirstQuote.split("'")[0]
           return valInsideQuotes
         }
       }
@@ -70,20 +78,5 @@ export const addOptionsToType = (typeAsString: string, options?: Record<any, any
     return typeAsString
   }
 
-  // const closingParensCount = getNumberOfEndingClosingParens(typeAsString);
-
-  // TODO: probably add ": SchemaOptions" here. Was mentioned in discussion, but I
-  // did not find the type anywhere? Perhaps I misunderstood something?
-  // src: https://github.com/sinclairzx81/typebox-codegen/discussions/13#discussioncomment-5858910
   return `${typeAsString.slice(0, -1)},${JSON.stringify(options)})`
 }
-
-// const getNumberOfEndingClosingParens = (type: string) => {
-//   let currentType = type;
-//   let closingEndingParensCount = 0;
-//   while (currentType.endsWith(")")) {
-//     currentType = currentType.slice(0, -1);
-//     closingEndingParensCount = closingEndingParensCount + 1;
-//   }
-//   return closingEndingParensCount;
-// };

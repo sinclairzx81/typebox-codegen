@@ -468,6 +468,29 @@ describe('ts2typebox - Typescript to Typebox', () => {
       `
       expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
     })
+    test(`supports ' as well as " for string JSON schema options`, () => {
+      const generatedTypebox = TypeScriptToTypeBox.Generate(`
+      type T = {
+        /**
+         * @test "should be supported"
+         * @anotherTest 'should be supported'
+         */
+        a: number;
+      };
+      `)
+      const expectedResult = `
+      import { Type, Static } from "@sinclair/typebox";
+
+      type T = Static<typeof T>;
+      const T = Type.Object({
+        a: Type.Number({
+          test: "should be supported",
+          anotherTest: "should be supported",
+        }),
+      });
+      `
+      expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
+    })
     test('type - optional', () => {
       const generatedTypebox = TypeScriptToTypeBox.Generate(`
       type T = {
