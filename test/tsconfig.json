@@ -6,8 +6,7 @@
     "baseUrl": ".",
     "esModuleInterop": true,
     "paths": {
-      "@sinclair/typebox/codegen": ["../src/index.ts"],
-      "@typebox/codegen": ["../src/index.ts"]
+      "@sinclair/typebox-codegen": ["../src/index.ts"]
     }
   }
 }

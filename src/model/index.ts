@@ -1,6 +1,6 @@
 /*--------------------------------------------------------------------------
 
-@typebox/codegen
+@sinclair/typebox-codegen
 
 The MIT License (MIT)
 
@@ -24,9 +24,14 @@ THE SOFTWARE.
 
 ---------------------------------------------------------------------------*/
 
+export * from './model-to-arktype'
+export * from './model-to-io-ts'
 export * from './model-to-javascript'
 export * from './model-to-json-schema'
 export * from './model-to-typebox'
 export * from './model-to-typescript'
+export * from './model-to-valibot'
+export * from './model-to-value'
+export * from './model-to-yup'
 export * from './model-to-zod'
 export * from './model'

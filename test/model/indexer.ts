@@ -1,4 +1,4 @@
-import { TypeScriptToModel } from '@sinclair/typebox/codegen'
+import { TypeScriptToModel } from '@sinclair/typebox-codegen'
 import { Type, TypeGuard, PatternStringExact } from '@sinclair/typebox'
 import { Assert } from '../assert'
 import { test } from 'node:test'
@@ -9,7 +9,7 @@ test('Indexer:StringKey', () => {
     type T = S['x']
   `)
   const T = M.exports.get('T') as any
-  Assert.isTrue(TypeGuard.TNumber(T))
+  Assert.IsTrue(TypeGuard.TNumber(T))
 })
 test('Indexer:NumberKey', () => {
   const M = TypeScriptToModel.Generate(`
@@ -17,5 +17,5 @@ test('Indexer:NumberKey', () => {
     type T = S[0]
   `)
   const T = M.exports.get('T') as any
-  Assert.isTrue(TypeGuard.TNumber(T))
+  Assert.IsTrue(TypeGuard.TNumber(T))
 })
