@@ -24,7 +24,7 @@ THE SOFTWARE.
 
 ---------------------------------------------------------------------------*/
 
-import { Formatter } from '../common/index'
+import { JsDoc, Formatter } from '../common/index'
 import * as ts from 'typescript'
 
 export class TypeScriptToTypeBoxError extends Error {
@@ -75,7 +75,7 @@ export namespace TypeScriptToTypeBox {
   let blockLevel: number = 0
   // (auto) tracked for injecting typebox import statements
   let useImports = false
-  // (auto) tracked for injecting typebox import statements
+  // (auto) tracked for injecting JSON schema optios
   let useOptions = false
   // (auto) tracked for injecting TSchema import statements
   let useGenerics = false
@@ -109,6 +109,22 @@ export namespace TypeScriptToTypeBox {
     return node.flags === ts.NodeFlags.Namespace
   }
   // ------------------------------------------------------------------------------------------------------------
+  // Options
+  // ------------------------------------------------------------------------------------------------------------
+  function ResolveJsDocComment(node: ts.TypeAliasDeclaration | ts.PropertySignature | ts.InterfaceDeclaration): string {
+    const content = node.getFullText().trim()
+    const indices = [content.indexOf('/**'), content.indexOf('type'), content.indexOf('interface')].map((n) => (n === -1 ? Infinity : n))
+    if (indices[0] === -1 || indices[1] < indices[0] || indices[2] < indices[0]) return '' // no comment or declaration before comment
+    for (let i = indices[0]; i < content.length; i++) {
+      if (content[i] === '*' && content[i + 1] === '/') return content.slice(0, i + 2)
+    }
+    return ''
+  }
+  function ResolveOptions(node: ts.TypeAliasDeclaration | ts.PropertySignature | ts.InterfaceDeclaration): Record<string, unknown> {
+    const content = ResolveJsDocComment(node)
+    return JsDoc.Parse(content)
+  }
+  // ------------------------------------------------------------------------------------------------------------
   // Identifiers
   // ------------------------------------------------------------------------------------------------------------
   function ResolveIdentifier(node: ts.InterfaceDeclaration | ts.TypeAliasDeclaration) {
@@ -118,23 +134,31 @@ export namespace TypeScriptToTypeBox {
     }
     return [...resolve(node), node.name.getText()].join('.')
   }
+  function UnwrapModifier(type: string) {
+    for (let i = 0; i < type.length; i++) if (type[i] === '(') return type.slice(i + 1, type.length - 1)
+    return type
+  }
   // Note: This function is only called when 'useIdentifiers' is true. What we're trying to achieve with
   // identifier injection is a referential type model over the default inline model. For the purposes of
   // code generation, we tend to prefer referential types as these can be both inlined or referenced in
   // the codegen target; and where different targets may have different referential requirements. It
   // should be possible to implement a more robust injection mechanism however. For review.
-  function InjectIdentifier($id: string, type: string, useOptions: boolean) {
-    const options = useOptions ? `{ $id: '${$id}', ...options }` : `{ $id: '${$id}' }`
-    if (!useIdentifiers) return type
+  function InjectOptions(type: string, options: Record<string, unknown>): string {
+    if (globalThis.Object.keys(options).length === 0) return type
+    // unwrap for modifiers
+    if (type.indexOf('Type.ReadonlyOptional') === 0) return `Type.ReadonlyOptional( ${InjectOptions(UnwrapModifier(type), options)} )`
+    if (type.indexOf('Type.Readonly') === 0) return `Type.Readonly( ${InjectOptions(UnwrapModifier(type), options)} )`
+    if (type.indexOf('Type.Optional') === 0) return `Type.Optional( ${InjectOptions(UnwrapModifier(type), options)} )`
+    const encoded = JSON.stringify(options)
     // indexer type
     if (type.lastIndexOf(']') === type.length - 1) useTypeClone = true
-    if (type.lastIndexOf(']') === type.length - 1) return `TypeClone.Clone(${type}, ${options})`
+    if (type.lastIndexOf(']') === type.length - 1) return `TypeClone.Clone(${type}, ${encoded})`
     // referenced type
-    if (type.indexOf('(') === -1) return `Type.Ref(${type}, ${options})`
-    if (type.lastIndexOf('()') === type.length - 2) return type.slice(0, type.length - 1) + `${options})`
-    if (type.lastIndexOf('})') === type.length - 2) return type.slice(0, type.length - 1) + `, ${options})`
-    if (type.lastIndexOf('])') === type.length - 2) return type.slice(0, type.length - 1) + `, ${options})`
-    if (type.lastIndexOf(')') === type.length - 1) return type.slice(0, type.length - 1) + `, ${options})`
+    if (type.indexOf('(') === -1) return `Type.Ref(${type}, ${encoded})`
+    if (type.lastIndexOf('()') === type.length - 2) return type.slice(0, type.length - 1) + `${encoded})`
+    if (type.lastIndexOf('})') === type.length - 2) return type.slice(0, type.length - 1) + `, ${encoded})`
+    if (type.lastIndexOf('])') === type.length - 2) return type.slice(0, type.length - 1) + `, ${encoded})`
+    if (type.lastIndexOf(')') === type.length - 1) return type.slice(0, type.length - 1) + `, ${encoded})`
     return type
   }
   // ------------------------------------------------------------------------------------------------------------
@@ -147,15 +171,17 @@ export namespace TypeScriptToTypeBox {
   }
   function* PropertySignature(node: ts.PropertySignature): IterableIterator<string> {
     const [readonly, optional] = [IsReadonlyProperty(node), IsOptionalProperty(node)]
-    const type = Collect(node.type)
+    const options = ResolveOptions(node)
+    const type_0 = Collect(node.type)
+    const type_1 = InjectOptions(type_0, options)
     if (readonly && optional) {
-      return yield `${node.name.getText()}: Type.ReadonlyOptional(${type})`
+      return yield `${node.name.getText()}: Type.ReadonlyOptional(${type_1})`
     } else if (readonly) {
-      return yield `${node.name.getText()}: Type.Readonly(${type})`
+      return yield `${node.name.getText()}: Type.Readonly(${type_1})`
     } else if (optional) {
-      return yield `${node.name.getText()}: Type.Optional(${type})`
+      return yield `${node.name.getText()}: Type.Optional(${type_1})`
     } else {
-      return yield `${node.name.getText()}: ${type}`
+      return yield `${node.name.getText()}: ${type_1}`
     }
   }
   function* ArrayTypeNode(node: ts.ArrayTypeNode): IterableIterator<string> {
@@ -210,7 +236,7 @@ export namespace TypeScriptToTypeBox {
       yield `Type.KeyOf(${type})`
     }
     if (node.operator === ts.SyntaxKind.ReadonlyKeyword) {
-      yield Collect(node.type)
+      yield `Type.Readonly(${Collect(node.type)})`
     }
   }
   function* Parameter(node: ts.ParameterDeclaration): IterableIterator<string> {
@@ -260,6 +286,8 @@ export namespace TypeScriptToTypeBox {
     if (node.typeParameters) {
       useGenerics = true
       const exports = IsExport(node) ? 'export ' : ''
+      const identifier = ResolveIdentifier(node)
+      const options = useIdentifiers ? { ...ResolveOptions(node), $id: identifier } : { ...ResolveOptions(node) }
       const constraints = node.typeParameters.map((param) => `${Collect(param)} extends TSchema`).join(', ')
       const parameters = node.typeParameters.map((param) => `${Collect(param)}: ${Collect(param)}`).join(', ')
       const names = node.typeParameters.map((param) => `${Collect(param)}`).join(', ')
@@ -267,18 +295,18 @@ export namespace TypeScriptToTypeBox {
       const staticDeclaration = `${exports}type ${node.name.getText()}<${constraints}> = Static<ReturnType<typeof ${node.name.getText()}<${names}>>>`
       const rawTypeExpression = IsRecursiveType(node) ? `Type.Recursive(This => Type.Object(${members}))` : `Type.Object(${members})`
       const typeExpression = heritage.length === 0 ? rawTypeExpression : `Type.Intersect([${heritage.join(', ')}, ${rawTypeExpression}])`
-      const type = InjectIdentifier(ResolveIdentifier(node), typeExpression, true && useIdentifiers)
-      const options = (true && useIdentifiers) ? ', options: SchemaOptions = {}' : ''
-      useOptions = useOptions || (true && useIdentifiers) // todo: refactor this
-      const typeDeclaration = `${exports}const ${node.name.getText()} = <${constraints}>(${parameters}${options}) => ${type}`
+      const type = InjectOptions(typeExpression, options)
+      const typeDeclaration = `${exports}const ${node.name.getText()} = <${constraints}>(${parameters}) => ${type}`
       yield `${staticDeclaration}\n${typeDeclaration}`
     } else {
       const exports = IsExport(node) ? 'export ' : ''
+      const identifier = ResolveIdentifier(node)
+      const options = useIdentifiers ? { ...ResolveOptions(node), $id: identifier } : { ...ResolveOptions(node) }
       const members = PropertiesFromTypeElementArray(node.members)
       const staticDeclaration = `${exports}type ${node.name.getText()} = Static<typeof ${node.name.getText()}>`
       const rawTypeExpression = IsRecursiveType(node) ? `Type.Recursive(This => Type.Object(${members}))` : `Type.Object(${members})`
       const typeExpression = heritage.length === 0 ? rawTypeExpression : `Type.Intersect([${heritage.join(', ')}, ${rawTypeExpression}])`
-      const type = InjectIdentifier(ResolveIdentifier(node), typeExpression, false)
+      const type = InjectOptions(typeExpression, options)
       const typeDeclaration = `${exports}const ${node.name.getText()} = ${type}`
       yield `${staticDeclaration}\n${typeDeclaration}`
     }
@@ -289,25 +317,26 @@ export namespace TypeScriptToTypeBox {
     useImports = true
     const isRecursiveType = IsRecursiveType(node)
     if (isRecursiveType) recursiveDeclaration = node
+    // Generics case
     if (node.typeParameters) {
       useGenerics = true
       const exports = IsExport(node) ? 'export ' : ''
+      const options = useIdentifiers ? { $id: ResolveIdentifier(node) } : {}
       const constraints = node.typeParameters.map((param) => `${Collect(param)} extends TSchema`).join(', ')
       const parameters = node.typeParameters.map((param) => `${Collect(param)}: ${Collect(param)}`).join(', ')
       const names = node.typeParameters.map((param) => Collect(param)).join(', ')
       const type_0 = Collect(node.type)
       const type_1 = isRecursiveType ? `Type.Recursive(This => ${type_0})` : type_0
-      const type_2 = InjectIdentifier(ResolveIdentifier(node), type_1, true && useIdentifiers)
-      const options = (true && useIdentifiers) ? ', options: SchemaOptions = {}' : ''
-      useOptions = useOptions || (true && useIdentifiers) // todo: refactor this
+      const type_2 = InjectOptions(type_1, options)
       const staticDeclaration = `${exports}type ${node.name.getText()}<${constraints}> = Static<ReturnType<typeof ${node.name.getText()}<${names}>>>`
-      const typeDeclaration = `${exports}const ${node.name.getText()} = <${constraints}>(${parameters}${options}) => ${type_2}`
+      const typeDeclaration = `${exports}const ${node.name.getText()} = <${constraints}>(${parameters}) => ${type_2}`
       yield `${staticDeclaration}\n${typeDeclaration}`
     } else {
       const exports = IsExport(node) ? 'export ' : ''
+      const options = useIdentifiers ? { $id: ResolveIdentifier(node), ...ResolveOptions(node) } : { ...ResolveOptions(node) }
       const type_0 = Collect(node.type)
       const type_1 = isRecursiveType ? `Type.Recursive(This => ${type_0})` : type_0
-      const type_2 = InjectIdentifier(ResolveIdentifier(node), type_1, false)
+      const type_2 = InjectOptions(type_1, options)
       const staticDeclaration = `${exports}type ${node.name.getText()} = Static<typeof ${node.name.getText()}>`
       const typeDeclaration = `${exports}const ${node.name.getText()} = ${type_2}`
       yield `${staticDeclaration}\n${typeDeclaration}`
@@ -488,13 +517,13 @@ export namespace TypeScriptToTypeBox {
     useTypeClone = false
     blockLevel = 0
     const source = ts.createSourceFile('types.ts', typescriptCode, ts.ScriptTarget.ESNext, true)
-    const declarations = Formatter.Format([...Visit(source)].join('\n\n'))
+    const declarations = [...Visit(source)].join('\n\n')
     const imports = ImportStatement(options)
     const typescript = [imports, '', declarations].join('\n')
     const assertion = ts.transpileModule(typescript, transpilerOptions)
     if (assertion.diagnostics && assertion.diagnostics.length > 0) {
       throw new TypeScriptToTypeBoxError(assertion.diagnostics)
     }
-    return typescript
+    return Formatter.Format(typescript)
   }
 }

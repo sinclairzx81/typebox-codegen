@@ -24,6 +24,16 @@ THE SOFTWARE.
 
 ---------------------------------------------------------------------------*/
 
-export * from './encoder'
-export * from './formatter'
-export * from './jsdoc'
+import { TypeBoxModel } from './model'
+import { Formatter } from '../common/formatter'
+import { Value } from '@sinclair/typebox/value'
+
+export namespace ModelToValue {
+  export function Generate(model: TypeBoxModel): string {
+    const definitions: string[] = []
+    for (const type of model.types) {
+      definitions.push(`export const ${type.$id!} = ${JSON.stringify(Value.Create(type))};`)
+    }
+    return Formatter.Format(definitions.join('\n\n'))
+  }
+}
