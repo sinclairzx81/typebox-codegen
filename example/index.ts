@@ -14,6 +14,14 @@ function Print(transform: string, code: any) {
 }
 
 const Code = `
+/**
+ * @description 'A union type'
+ */
+export type T = string | number
+
+/**
+ * @description 'A vector type'
+ */
 export interface Vector {
   /**
    * @default 1
