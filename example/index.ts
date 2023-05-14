@@ -12,14 +12,16 @@ function Print(transform: string, code: any) {
   console.log(data)
   console.log('')
 }
-const Code = `
-  export interface Vector<T> { x: T, y: T }
-  type A = Vector<number>
-  type B = Vector<string> 
-  type C = Vector<boolean> 
-  type D = (A & B & C) | string | number
-`
 
+const Code = `
+type T = {
+  /**
+  * @minItems 2
+  * @maxItems 2
+  */
+   a: readonly number[];
+ };
+`
 // ----------------------------------------------------------------------------
 // Typescript Base
 // ----------------------------------------------------------------------------
