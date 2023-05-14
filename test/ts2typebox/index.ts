@@ -1,7 +1,7 @@
+import * as prettier from 'prettier'
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import * as prettier from 'prettier'
-import { TypeScriptToTypeBox } from '@typebox/codegen'
+import { TypeScriptToTypeBox } from '@sinclair/typebox-codegen'
 
 const formatWithPrettier = (input: string): string => {
   return prettier.format(input, { parser: 'typescript' })
@@ -21,19 +21,11 @@ describe('ts2typebox - Typescript to Typebox', () => {
   test('string', () => {
     const generatedTypebox = TypeScriptToTypeBox.Generate(`type T = string`)
     const expectedResult = `
-  test('string', () => {
-    const generatedTypebox = TypeScriptToTypeBox.Generate(`type T = string`)
-    const expectedResult = `
       import { Type, Static } from "@sinclair/typebox";
 
       type T = Static<typeof T>;
       const T = Type.String();
       `
-    expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
-  })
-  test('number', () => {
-    const generatedTypebox = TypeScriptToTypeBox.Generate(`type T = number`)
-    const expectedResult = `
     expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
   })
   test('number', () => {
@@ -49,11 +41,6 @@ describe('ts2typebox - Typescript to Typebox', () => {
   test('boolean', () => {
     const generatedTypebox = TypeScriptToTypeBox.Generate(`type T = boolean`)
     const expectedResult = `
-    expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
-  })
-  test('boolean', () => {
-    const generatedTypebox = TypeScriptToTypeBox.Generate(`type T = boolean`)
-    const expectedResult = `
       import { Type, Static } from "@sinclair/typebox";
 
       type T = Static<typeof T>;
@@ -64,21 +51,11 @@ describe('ts2typebox - Typescript to Typebox', () => {
   test('any', () => {
     const generatedTypebox = TypeScriptToTypeBox.Generate(`type T = any`)
     const expectedResult = `
-    expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
-  })
-  test('any', () => {
-    const generatedTypebox = TypeScriptToTypeBox.Generate(`type T = any`)
-    const expectedResult = `
       import { Type, Static } from '@sinclair/typebox'
 
       type T = Static<typeof T>
       const T = Type.Any()
       `
-    expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
-  })
-  test('unknown', () => {
-    const generatedTypebox = TypeScriptToTypeBox.Generate(`type T = unknown`)
-    const expectedResult = `
     expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
   })
   test('unknown', () => {
@@ -114,41 +91,11 @@ describe('ts2typebox - Typescript to Typebox', () => {
   test('Array<string>', () => {
     const generatedTypebox = TypeScriptToTypeBox.Generate(`type T = Array<string>`)
     const expectedResult = `
-    expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
-  })
-  test('never', () => {
-    const generatedTypebox = TypeScriptToTypeBox.Generate(`type T = never`)
-    const expectedResult = `
-      import { Type, Static } from "@sinclair/typebox";
-
-      type T = Static<typeof T>;
-      const T = Type.Never();
-      `
-    expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
-  })
-  test('null', () => {
-    const generatedTypebox = TypeScriptToTypeBox.Generate(`type T = null`)
-    const expectedResult = `
-    import { Type, Static } from "@sinclair/typebox";
-
-    type T = Static<typeof T>;
-    const T = Type.Null();
-    `
-    expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
-  })
-  test('Array<string>', () => {
-    const generatedTypebox = TypeScriptToTypeBox.Generate(`type T = Array<string>`)
-    const expectedResult = `
         import { Type, Static } from "@sinclair/typebox";
 
         type T = Static<typeof T>;
         const T = Type.Array(Type.String());
         `
-    expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
-  })
-  test('string[]', () => {
-    const generatedTypebox = TypeScriptToTypeBox.Generate(`type T = string[]`)
-    const expectedResult = `
     expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
   })
   test('string[]', () => {

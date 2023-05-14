@@ -1,6 +1,6 @@
 /*--------------------------------------------------------------------------
 
-@typebox/codegen
+@sinclair/typebox-codegen
 
 The MIT License (MIT)
 
@@ -24,9 +24,10 @@ THE SOFTWARE.
 
 ---------------------------------------------------------------------------*/
 
-import * as Types from '@sinclair/typebox'
-import { Formatter } from '../common/index'
 import { TypeBoxModel } from './model'
+import { Formatter } from '../common/formatter'
+import { TypeCompiler } from '@sinclair/typebox/compiler'
+import * as Types from '@sinclair/typebox'
 
 export namespace ModelToTypeScript {
   function Any(schema: Types.TAny) {
@@ -39,21 +40,27 @@ export namespace ModelToTypeScript {
   function Boolean(schema: Types.TBoolean) {
     return 'boolean'
   }
+  function BigInt(schema: Types.TBigInt) {
+    return 'bigint'
+  }
   function Constructor(schema: Types.TConstructor) {
-    const params = schema.parameters.map((param, index) => `param${index} : ${Visit(param)}`).join(', ')
+    const params = schema.parameters.map((param) => Visit(param)).join(', ')
     const returns = Visit(schema.returns)
-    return `new (${params}) => ${returns}`
+    return `(new (${params}) => ${returns})`
+  }
+  function Date(schema: Types.TDate) {
+    return 'Date'
   }
   function Function(schema: Types.TFunction) {
-    const params = schema.parameters.map((param, index) => `param${index} : ${Visit(param)}`).join(', ')
+    const params = schema.parameters.map((param) => Visit(param)).join(', ')
     const returns = Visit(schema.returns)
-    return `(${params}) => ${returns}`
+    return `((${params}) => ${returns})`
   }
   function Integer(schema: Types.TInteger) {
     return 'number'
   }
   function Intersect(schema: Types.TIntersect) {
-    return `(${schema.allOf.map((schema) => Visit(schema)).join(' & ')})`
+    return schema.allOf.map((schema) => Visit(schema)).join(' & ')
   }
   function Literal(schema: Types.TLiteral) {
     if (typeof schema.const === 'string') {
@@ -89,7 +96,7 @@ export namespace ModelToTypeScript {
   function Record(schema: Types.TRecord) {
     for (const [key, value] of globalThis.Object.entries(schema.patternProperties)) {
       const type = Visit(value)
-      if (key === Types.PatternNumberExact) {
+      if (key === '^(0|[1-9][0-9]*)$') {
         return `Record<number, ${type}>`
       } else {
         return `Record<string, ${type}>`
@@ -115,7 +122,7 @@ export namespace ModelToTypeScript {
     return `undefined`
   }
   function Union(schema: Types.TUnion) {
-    return `${schema.anyOf.map((schema) => Visit(schema)).join(' | ')}`
+    return schema.anyOf.map((schema) => Visit(schema)).join(' | ')
   }
   function Unknown(schema: Types.TUnknown) {
     return `unknown`
@@ -123,14 +130,15 @@ export namespace ModelToTypeScript {
   function Void(schema: Types.TVoid) {
     return `void`
   }
-  function UnsupportedType() {
-    return `never`
-  }
   function Visit(schema: Types.TSchema): string {
+    if (reference_map.has(schema.$id!)) return schema.$id!
+    if (schema.$id !== undefined) reference_map.set(schema.$id, schema)
     if (Types.TypeGuard.TAny(schema)) return Any(schema)
     if (Types.TypeGuard.TArray(schema)) return Array(schema)
     if (Types.TypeGuard.TBoolean(schema)) return Boolean(schema)
+    if (Types.TypeGuard.TBigInt(schema)) return BigInt(schema)
     if (Types.TypeGuard.TConstructor(schema)) return Constructor(schema)
+    if (Types.TypeGuard.TDate(schema)) return Date(schema)
     if (Types.TypeGuard.TFunction(schema)) return Function(schema)
     if (Types.TypeGuard.TInteger(schema)) return Integer(schema)
     if (Types.TypeGuard.TIntersect(schema)) return Intersect(schema)
@@ -142,27 +150,36 @@ export namespace ModelToTypeScript {
     if (Types.TypeGuard.TPromise(schema)) return Promise(schema)
     if (Types.TypeGuard.TRecord(schema)) return Record(schema)
     if (Types.TypeGuard.TRef(schema)) return Ref(schema)
-    if (Types.TypeGuard.TString(schema)) return String(schema)
     if (Types.TypeGuard.TThis(schema)) return This(schema)
+    if (Types.TypeGuard.TString(schema)) return String(schema)
     if (Types.TypeGuard.TTuple(schema)) return Tuple(schema)
     if (Types.TypeGuard.TUint8Array(schema)) return UInt8Array(schema)
     if (Types.TypeGuard.TUndefined(schema)) return Undefined(schema)
     if (Types.TypeGuard.TUnion(schema)) return Union(schema)
     if (Types.TypeGuard.TUnknown(schema)) return Unknown(schema)
     if (Types.TypeGuard.TVoid(schema)) return Void(schema)
-    return UnsupportedType()
+    return 'unknown'
   }
-  /** Generates TypeScript code from TypeBox types */
-  export function GenerateType(schema: Types.TSchema, references: Types.TSchema[] = []) {
-    const buffer: string[] = []
-    buffer.push(`export type ${schema.$id || 'T'} = ${[...Visit(schema)].join('')}`)
-    return Formatter.Format(buffer.join('\n\n'))
+  export function GenerateType(model: TypeBoxModel, $id: string) {
+    reference_map.clear()
+    const type = model.types.find((type) => type.$id === $id)
+    if (type === undefined) return `export type ${$id} = unknown`
+    return `export type ${type.$id!} = ${Visit(type)}`
   }
-  export function Generate(model: TypeBoxModel) {
-    const buffer: string[] = []
+  const reference_map = new Map<string, Types.TSchema>()
+  export function Generate(model: TypeBoxModel): string {
+    reference_map.clear()
+    const definitions: string[] = []
     for (const type of model.types) {
-      buffer.push(GenerateType(type, model.types))
+      const definition = `export type ${type.$id!} = ${Visit(type)}`
+      const assertion = `export const ${type.$id!} = (() => { ${TypeCompiler.Code(type, model.types, { language: 'typescript' })} })();`
+      const rewritten = assertion.replaceAll(`return function check(value: any): boolean`, `return function check(value: any): value is ${type.$id!}`)
+      definitions.push(`
+      ${definition}
+      ${rewritten}
+      `)
     }
-    return Formatter.Format(buffer.join('\n'))
+    const output = [...definitions]
+    return Formatter.Format(output.join('\n\n'))
   }
 }
