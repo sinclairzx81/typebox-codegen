@@ -1,6 +1,6 @@
 /*--------------------------------------------------------------------------
 
-@typebox/codegen
+@sinclair/typebox-codegen
 
 The MIT License (MIT)
 
@@ -25,15 +25,18 @@ THE SOFTWARE.
 ---------------------------------------------------------------------------*/
 
 import { TypeBoxModel } from './model'
-import { Formatter } from '../common/formatter'
 import { TypeCompiler } from '@sinclair/typebox/compiler'
 
 export namespace ModelToJavaScript {
   export function Generate(model: TypeBoxModel): string {
     const definitions: string[] = []
+    const header = `// @ts-nocheck`
     for (const type of model.types) {
-      definitions.push(`export const ${type.$id!} = (function() { ${TypeCompiler.Code(type)} })();`)
+      definitions.push(`export const ${type.$id!} = (() => { 
+        ${TypeCompiler.Code(type, model.types, { language: 'javascript' })} 
+      })()`)
     }
-    return Formatter.Format(definitions.join('\n\n'))
+    const output = [header, ...definitions]
+    return output.join('\n\n')
   }
 }

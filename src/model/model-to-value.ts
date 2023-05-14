@@ -25,9 +25,18 @@ THE SOFTWARE.
 ---------------------------------------------------------------------------*/
 
 import { TypeBoxModel } from './model'
+import { Value } from '@sinclair/typebox/value'
 
-export namespace ModelToTypeBox {
-  export function Generate(model: TypeBoxModel) {
-    return '// todo'
+export namespace ModelToValue {
+  export function Generate(model: TypeBoxModel): string {
+    const definitions: string[] = []
+
+    for (const type of model.types) {
+      definitions.push(`
+      export const ${type.$id!} = ${JSON.stringify(Value.Create(type, model.types))};
+      `)
+    }
+    const output = [...definitions]
+    return output.join('\n\n')
   }
 }
