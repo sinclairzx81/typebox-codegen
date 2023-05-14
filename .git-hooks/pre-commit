@@ -1,8 +1,8 @@
 #!/bin/sh
 #
-# Runs prettier on all files before comitting them.
-# This does only work correctly if prettier is the only formatting tool (which
-# should be the case).
+# Runs prettier on all files before comitting them. This does only work correctly if 
+# prettier is the only formatting tool (which should be the case).
+#
 # src: https://prettier.io/docs/en/precommit.html
 
 FILES=$(git diff --cached --name-only --diff-filter=ACMR | sed 's| |\\ |g')
