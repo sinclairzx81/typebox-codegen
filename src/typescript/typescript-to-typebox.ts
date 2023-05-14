@@ -41,19 +41,19 @@ export interface TypeScriptToTypeBoxOptions {
    * used by the TypeScriptToTypeBoxModel to gather TypeBox definitions during runtime eval
    * pass. The default is false
    */
-  useExportEverything: boolean
+  useExportEverything?: boolean
   /**
    * Specifies if the output code should specify a default `import` statement. For TypeScript
    * generated code this is typically desirable, but for Model generated code, the `Type`
    * build is passed in into scope as a variable. The default is true.
    */
-  useTypeBoxImport: boolean
+  useTypeBoxImport?: boolean
   /**
    * Specifies if the output types should include an identifier associated with the assigned
    * variable name. This is useful for remapping model types to targets, but optional for
    * for TypeBox which can operate on vanilla JS references. The default is false.
    */
-  useIdentifiers: boolean
+  useIdentifiers?: boolean
   /**
    * Specifies the formatting function that is run after all code was generated.
    * Defaults to running prettier with the config:
@@ -102,6 +102,7 @@ export namespace TypeScriptToTypeBox {
   let useExportsEverything = false
   // (option) inject identifiers
   let useIdentifiers = false
+  let useTypeBoxImport = true
   // ------------------------------------------------------------------------------------------------------------
   // AST Query
   // ------------------------------------------------------------------------------------------------------------
@@ -506,8 +507,8 @@ export namespace TypeScriptToTypeBox {
     }
     console.warn('Unhandled:', ts.SyntaxKind[node.kind], node.getText())
   }
-  export function ImportStatement(options: TypeScriptToTypeBoxOptions): string {
-    if (!(useImports && options.useTypeBoxImport)) return ''
+  export function ImportStatement(): string {
+    if (!(useImports && useTypeBoxImport)) return ''
     const imported = ['Type', 'Static']
     if (useGenerics) imported.push('TSchema')
     if (useOptions) imported.push('SchemaOptions')
@@ -515,16 +516,10 @@ export namespace TypeScriptToTypeBox {
     return `import { ${imported.join(', ')} } from '@sinclair/typebox'`
   }
   /** Generates TypeBox types from TypeScript interface and type definitions */
-  export function Generate(
-    typescriptCode: string,
-    options: TypeScriptToTypeBoxOptions = {
-      useExportEverything: false,
-      useTypeBoxImport: true,
-      useIdentifiers: false,
-    },
-  ) {
-    useExportsEverything = options.useExportEverything
-    useIdentifiers = options.useIdentifiers
+  export function Generate(typescriptCode: string, options?: TypeScriptToTypeBoxOptions) {
+    useExportsEverything = options?.useExportEverything ?? false
+    useIdentifiers = options?.useIdentifiers ?? false
+    useTypeBoxImport = options?.useTypeBoxImport ?? true
     typeNames.clear()
     useImports = false
     useOptions = false
@@ -533,12 +528,12 @@ export namespace TypeScriptToTypeBox {
     blockLevel = 0
     const source = ts.createSourceFile('types.ts', typescriptCode, ts.ScriptTarget.ESNext, true)
     const declarations = [...Visit(source)].join('\n\n')
-    const imports = ImportStatement(options)
+    const imports = ImportStatement()
     const typescript = [imports, '', declarations].join('\n')
     const assertion = ts.transpileModule(typescript, transpilerOptions)
     if (assertion.diagnostics && assertion.diagnostics.length > 0) {
       throw new TypeScriptToTypeBoxError(assertion.diagnostics)
     }
-    return options.formattingFunction === undefined ? Formatter.Format(typescript) : options.formattingFunction(typescript)
+    return options?.formattingFunction === undefined ? Formatter.Format(typescript) : options.formattingFunction(typescript)
   }
 }
