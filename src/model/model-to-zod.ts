@@ -32,12 +32,19 @@ import * as Types from '@sinclair/typebox'
 // ModelToZod
 // --------------------------------------------------------------------------
 export namespace ModelToZod {
+  function IsDefined<T = any>(value: unknown): value is T {
+    return value !== undefined
+  }
   function Any(schema: Types.TAny) {
     return `z.any()`
   }
   function Array(schema: Types.TArray) {
     const items = Visit(schema.items)
-    return `z.array(${items})`
+    const buffer: string[] = []
+    buffer.push(`z.array(${items})`)
+    if (IsDefined<number>(schema.minItems)) buffer.push(`.min(${schema.minItems})`)
+    if (IsDefined<number>(schema.maxItems)) buffer.push(`.max(${schema.maxItems})`)
+    return buffer.join(``)
   }
   function Boolean(schema: Types.TBoolean) {
     return `z.boolean()`
@@ -53,11 +60,11 @@ export namespace ModelToZod {
   function Integer(schema: Types.TInteger) {
     const buffer: string[] = []
     buffer.push(`z.number().int()`)
-    if (schema.minimum !== undefined) buffer.push(`.min(${schema.minimum})`)
-    if (schema.maximum !== undefined) buffer.push(`.max(${schema.maximum})`)
-    if (schema.exclusiveMaximum !== undefined) buffer.push(`.max(${schema.exclusiveMaximum - 1})`)
-    if (schema.exclusiveMinimum !== undefined) buffer.push(`.max(${schema.exclusiveMinimum + 1})`)
-    if (schema.multipleOf !== undefined) buffer.push(`.multipleOf(${schema.multipleOf})`)
+    if (IsDefined<number>(schema.minimum)) buffer.push(`.min(${schema.minimum})`)
+    if (IsDefined<number>(schema.maximum)) buffer.push(`.max(${schema.maximum})`)
+    if (IsDefined<number>(schema.exclusiveMaximum)) buffer.push(`.max(${schema.exclusiveMaximum - 1})`)
+    if (IsDefined<number>(schema.exclusiveMinimum)) buffer.push(`.max(${schema.exclusiveMinimum + 1})`)
+    if (IsDefined<number>(schema.multipleOf)) buffer.push(`.multipleOf(${schema.multipleOf})`)
     return buffer.join(``)
   }
   function Intersect(schema: Types.TIntersect) {
@@ -83,18 +90,18 @@ export namespace ModelToZod {
   function String(schema: Types.TString) {
     const buffer: string[] = []
     buffer.push(`z.string()`)
-    if (schema.maxLength !== undefined) buffer.push(`.max(${schema.maxLength})`)
-    if (schema.minLength !== undefined) buffer.push(`.min(${schema.minLength})`)
+    if (IsDefined<number>(schema.maxLength)) buffer.push(`.max(${schema.maxLength})`)
+    if (IsDefined<number>(schema.minLength)) buffer.push(`.min(${schema.minLength})`)
     return buffer.join(``)
   }
   function Number(schema: Types.TNumber) {
     const buffer: string[] = []
     buffer.push(`z.number()`)
-    if (schema.minimum !== undefined) buffer.push(`.min(${schema.minimum})`)
-    if (schema.maximum !== undefined) buffer.push(`.max(${schema.maximum})`)
-    if (schema.exclusiveMaximum !== undefined) buffer.push(`.max(${schema.exclusiveMaximum - 1})`)
-    if (schema.exclusiveMinimum !== undefined) buffer.push(`.max(${schema.exclusiveMinimum + 1})`)
-    if (schema.multipleOf !== undefined) buffer.push(`.multipleOf(${schema.multipleOf})`)
+    if (IsDefined<number>(schema.minimum)) buffer.push(`.min(${schema.minimum})`)
+    if (IsDefined<number>(schema.maximum)) buffer.push(`.max(${schema.maximum})`)
+    if (IsDefined<number>(schema.exclusiveMaximum)) buffer.push(`.max(${schema.exclusiveMaximum - 1})`)
+    if (IsDefined<number>(schema.exclusiveMinimum)) buffer.push(`.max(${schema.exclusiveMinimum + 1})`)
+    if (IsDefined<number>(schema.multipleOf)) buffer.push(`.multipleOf(${schema.multipleOf})`)
     return buffer.join(``)
   }
   function Object(schema: Types.TObject) {

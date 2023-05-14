@@ -24,13 +24,11 @@
   "homepage": "https://github.com/sinclairzx81/typebox-codegen#readme",
   "devDependencies": {
     "@sinclair/hammer": "^0.17.2",
-    "@types/doctrine": "^0.0.5",
     "@types/node": "^18.15.11",
     "@types/prettier": "^2.7.2"
   },
   "dependencies": {
-    "@sinclair/typebox": "^0.28.6",
-    "doctrine": "^3.0.0",
+    "@sinclair/typebox": "^0.28.10",
     "prettier": "^2.8.7",
     "typescript": "^5.0.4"
   },

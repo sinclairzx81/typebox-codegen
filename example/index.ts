@@ -12,14 +12,31 @@ function Print(transform: string, code: any) {
   console.log(data)
   console.log('')
 }
-const Code = `
-  export interface Vector<T> { x: T, y: T }
-  type A = Vector<number>
-  type B = Vector<string> 
-  type C = Vector<boolean> 
-  type D = (A & B & C) | string | number
-`
 
+const Code = `
+/**
+ * @description 'A union type'
+ */
+export type T = string | number
+
+/**
+ * @description 'A vector type'
+ */
+export interface Vector {
+  /**
+   * @default 1
+   */
+  x: number
+  /**
+   * @default 2
+   */
+  y: number
+  /**
+   * @default 3
+   */
+  z: number
+}
+`
 // ----------------------------------------------------------------------------
 // Typescript Base
 // ----------------------------------------------------------------------------
@@ -38,4 +55,5 @@ Print('TypeScript To Model', model)
 Print('Model To JsonSchema', Codegen.ModelToJsonSchema.Generate(model))
 Print('Model To JavaScript', Codegen.ModelToJavaScript.Generate(model))
 Print('Model To TypeScript', Codegen.ModelToTypeScript.Generate(model))
+Print('Model To Value', Codegen.ModelToValue.Generate(model))
 Print('Model To Zod', Codegen.ModelToZod.Generate(model))
