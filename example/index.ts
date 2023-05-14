@@ -14,13 +14,20 @@ function Print(transform: string, code: any) {
 }
 
 const Code = `
-type T = {
+export interface Vector {
   /**
-  * @minItems 2
-  * @maxItems 2
-  */
-   a: readonly number[];
- };
+   * @default 1
+   */
+  x: number
+  /**
+   * @default 2
+   */
+  y: number
+  /**
+   * @default 3
+   */
+  z: number
+}
 `
 // ----------------------------------------------------------------------------
 // Typescript Base
@@ -40,4 +47,5 @@ Print('TypeScript To Model', model)
 Print('Model To JsonSchema', Codegen.ModelToJsonSchema.Generate(model))
 Print('Model To JavaScript', Codegen.ModelToJavaScript.Generate(model))
 Print('Model To TypeScript', Codegen.ModelToTypeScript.Generate(model))
+Print('Model To Value', Codegen.ModelToValue.Generate(model))
 Print('Model To Zod', Codegen.ModelToZod.Generate(model))

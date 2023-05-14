@@ -24,10 +24,16 @@ THE SOFTWARE.
 
 ---------------------------------------------------------------------------*/
 
-export * from './model-to-javascript'
-export * from './model-to-json-schema'
-export * from './model-to-typebox'
-export * from './model-to-typescript'
-export * from './model-to-value'
-export * from './model-to-zod'
-export * from './model'
+import { TypeBoxModel } from './model'
+import { Formatter } from '../common/formatter'
+import { Value } from '@sinclair/typebox/value'
+
+export namespace ModelToValue {
+  export function Generate(model: TypeBoxModel): string {
+    const definitions: string[] = []
+    for (const type of model.types) {
+      definitions.push(`export const ${type.$id!} = ${JSON.stringify(Value.Create(type))};`)
+    }
+    return Formatter.Format(definitions.join('\n\n'))
+  }
+}
