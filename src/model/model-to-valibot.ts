@@ -30,149 +30,143 @@ import { ModelToTypeScript } from './model-to-typescript'
 import * as Types from '@sinclair/typebox'
 
 // --------------------------------------------------------------------------
-// ModelToZod
+// ModelToValibot
 // --------------------------------------------------------------------------
-export namespace ModelToZod {
+export namespace ModelToValibot {
   function IsDefined<T = any>(value: unknown): value is T {
     return value !== undefined
   }
-  function Type(schema: Types.TSchema, type: string) {
-    return schema.default === undefined ? type : `${type}.default(${JSON.stringify(schema.default)})`
+  function Type(type: string, parameter: string | null, constraints: string[]) {
+    if (constraints.length > 0) {
+      if (typeof parameter === 'string') {
+        return `${type}(${parameter}, [${constraints.join(', ')}])`
+      } else {
+        return `${type}([${constraints.join(', ')}])`
+      }
+    } else {
+      if (typeof parameter === 'string') {
+        return `${type}(${parameter})`
+      } else {
+        return `${type}()`
+      }
+    }
   }
   function Any(schema: Types.TAny) {
-    return Type(schema, `z.any()`)
+    return Type(`v.any`, null, [])
   }
   function Array(schema: Types.TArray) {
     const items = Visit(schema.items)
-    const buffer: string[] = []
-    buffer.push(`z.array(${items})`)
-    if (IsDefined<number>(schema.minItems)) buffer.push(`.min(${schema.minItems})`)
-    if (IsDefined<number>(schema.maxItems)) buffer.push(`.max(${schema.maxItems})`)
-    return Type(schema, buffer.join(``))
+    const constraints: string[] = []
+    if (IsDefined<number>(schema.minItems)) constraints.push(`v.minLength(${schema.minItems})`)
+    if (IsDefined<number>(schema.maxItems)) constraints.push(`v.maxLength(${schema.maxItems})`)
+    return Type(`v.array`, items, constraints)
   }
   function BigInt(schema: Types.TBigInt) {
-    return Type(schema, `z.bigint()`)
+    return Type(`v.bigint`, null, [])
   }
   function Boolean(schema: Types.TBoolean) {
-    return Type(schema, `z.boolean()`)
+    return Type(`v.boolean`, null, [])
   }
   function Date(schema: Types.TDate) {
-    return Type(schema, `z.date()`)
+    return Type(`v.date`, null, [])
   }
   function Constructor(schema: Types.TConstructor): string {
     return UnsupportedType(schema)
   }
   function Function(schema: Types.TFunction) {
-    const params = schema.parameters.map((param) => Visit(param)).join(`, `)
-    const returns = Visit(schema.returns)
-    return Type(schema, `z.function().args(${params}).returns(${returns})`)
+    return UnsupportedType(schema)
   }
   function Integer(schema: Types.TInteger) {
-    const buffer: string[] = []
-    buffer.push(`z.number().int()`)
-    if (IsDefined<number>(schema.minimum)) buffer.push(`.min(${schema.minimum})`)
-    if (IsDefined<number>(schema.maximum)) buffer.push(`.max(${schema.maximum})`)
-    if (IsDefined<number>(schema.exclusiveMinimum)) buffer.push(`.min(${schema.exclusiveMinimum + 1})`)
-    if (IsDefined<number>(schema.exclusiveMaximum)) buffer.push(`.max(${schema.exclusiveMaximum - 1})`)
-    if (IsDefined<number>(schema.multipleOf)) buffer.push(`.multipleOf(${schema.multipleOf})`)
-    return Type(schema, buffer.join(``))
+    return UnsupportedType(schema)
   }
   function Intersect(schema: Types.TIntersect) {
-    function reduce(rest: Types.TSchema[]): string {
-      if (rest.length === 0) return `z.never()`
-      if (rest.length === 1) return Visit(rest[0])
-      const [left, right] = [rest[0], rest.slice(1)]
-      return Type(schema, `z.intersection(${Visit(left)}, ${reduce(right)})`)
-    }
-    return reduce(schema.allOf)
+    const inner = schema.allOf.map((inner) => Visit(inner))
+    return Type(`v.merge`, `[${inner.join(', ')}]`, [])
   }
   function Literal(schema: Types.TLiteral) {
-    return typeof schema.const === `string` ? Type(schema, `z.literal('${schema.const}')`) : Type(schema, `z.literal(${schema.const})`)
+    // prettier-ignore
+    return typeof schema.const === `string` 
+      ? Type(`v.literal`, `'${schema.const}'`, []) 
+      : Type(`v.literal`, `${schema.const}`, [])
   }
   function Never(schema: Types.TNever) {
-    return Type(schema, `z.never()`)
+    return Type(`v.never`, null, [])
   }
   function Null(schema: Types.TNull) {
-    return Type(schema, `z.null()`)
+    return UnsupportedType(schema)
   }
   function String(schema: Types.TString) {
-    const buffer: string[] = []
-    buffer.push(`z.string()`)
-    if (IsDefined<number>(schema.maxLength)) buffer.push(`.max(${schema.maxLength})`)
-    if (IsDefined<number>(schema.minLength)) buffer.push(`.min(${schema.minLength})`)
-    return Type(schema, buffer.join(``))
+    const constraints: string[] = []
+    if (IsDefined<number>(schema.maxLength)) constraints.push(`v.maxLength(${schema.maxLength})`)
+    if (IsDefined<number>(schema.minLength)) constraints.push(`v.minLength(${schema.minLength})`)
+    return Type(`v.string`, null, constraints)
   }
   function Number(schema: Types.TNumber) {
-    const buffer: string[] = []
-    buffer.push(`z.number()`)
-    if (IsDefined<number>(schema.minimum)) buffer.push(`.min(${schema.minimum})`)
-    if (IsDefined<number>(schema.maximum)) buffer.push(`.max(${schema.maximum})`)
-    if (IsDefined<number>(schema.exclusiveMinimum)) buffer.push(`.min(${schema.exclusiveMinimum + 1})`)
-    if (IsDefined<number>(schema.exclusiveMaximum)) buffer.push(`.max(${schema.exclusiveMaximum - 1})`)
-    if (IsDefined<number>(schema.multipleOf)) buffer.push(`.multipleOf(${schema.multipleOf})`)
-    return Type(schema, buffer.join(``))
+    const constraints: string[] = []
+    if (IsDefined<number>(schema.minimum)) constraints.push(`v.minValue(${schema.minimum})`)
+    if (IsDefined<number>(schema.maximum)) constraints.push(`v.maxValue(${schema.maximum})`)
+    if (IsDefined<number>(schema.exclusiveMinimum)) constraints.push(`v.minValue(${schema.exclusiveMinimum + 1})`)
+    if (IsDefined<number>(schema.exclusiveMaximum)) constraints.push(`v.maxValue(${schema.exclusiveMaximum - 1})`)
+    return Type('v.number', null, constraints)
   }
   function Object(schema: Types.TObject) {
     // prettier-ignore
     const properties = globalThis.Object.entries(schema.properties).map(([key, value]) => {
       const optional = Types.TypeGuard.TOptional(value)
       const property = PropertyEncoder.Encode(key)
-      return optional ? `${property}: ${Visit(value)}.optional()` : `${property}: ${Visit(value)}`
+      return optional ? `${property}: v.optional(${Visit(value)})` : `${property}: ${Visit(value)}`
     }).join(`,`)
-    const buffer: string[] = []
-    buffer.push(`z.object({\n${properties}\n})`)
-    if (schema.additionalProperties === false) buffer.push(`.strict()`)
-    return Type(schema, buffer.join(``))
+    const constraints: string[] = []
+    return Type(`v.object`, `{\n${properties}\n}`, constraints)
   }
   function Promise(schema: Types.TPromise) {
-    const item = Visit(schema.item)
-    return Type(schema, `${item}.promise()`)
+    return UnsupportedType(schema)
   }
   function Record(schema: Types.TRecord) {
     for (const [key, value] of globalThis.Object.entries(schema.patternProperties)) {
       const type = Visit(value)
       if (key === `^(0|[1-9][0-9]*)$`) {
-        return `z.record(z.number(), ${type})`
+        return UnsupportedType(schema)
       } else {
-        return `z.record(${type})`
+        return Type(`v.record`, type, [])
       }
     }
     throw Error(`Unreachable`)
   }
   function Ref(schema: Types.TRef) {
-    if (!reference_map.has(schema.$ref!)) return UnsupportedType(schema) // throw new ModelToZodNonReferentialType(schema.$ref!)
+    if (!reference_map.has(schema.$ref!)) return UnsupportedType(schema)
     return schema.$ref
   }
   function This(schema: Types.TThis) {
-    if (!reference_map.has(schema.$ref!)) return UnsupportedType(schema) //throw new ModelToZodNonReferentialType(schema.$ref!)
-    recursive_set.add(schema.$ref)
-    return schema.$ref
+    return UnsupportedType(schema)
   }
   function Tuple(schema: Types.TTuple) {
     if (schema.items === undefined) return `[]`
     const items = schema.items.map((schema) => Visit(schema)).join(`, `)
-    return Type(schema, `z.tuple([${items}])`)
+    return Type(`v.tuple`, `[${items}]`, [])
   }
   function TemplateLiteral(schema: Types.TTemplateLiteral) {
-    return Type(schema, `z.string().regex(/${schema.pattern}/)`)
+    const constaint = Type(`v.regex`, `/${schema.pattern}/`, [])
+    return Type(`v.string`, null, [constaint])
   }
   function UInt8Array(schema: Types.TUint8Array): string {
-    return Type(schema, `z.instanceof(Uint8Array)`)
+    return UnsupportedType(schema)
   }
   function Undefined(schema: Types.TUndefined) {
-    return Type(schema, `z.undefined()`)
+    return UnsupportedType(schema)
   }
   function Union(schema: Types.TUnion) {
-    return Type(schema, `z.union([${schema.anyOf.map((schema) => Visit(schema)).join(`, `)}])`)
+    const inner = schema.anyOf.map((schema) => Visit(schema)).join(`, `)
+    return Type(`v.union`, `[${inner}]`, [])
   }
   function Unknown(schema: Types.TUnknown) {
-    return Type(schema, `z.unknown()`)
+    return Type(`v.unknown`, null, [])
   }
   function Void(schema: Types.TVoid) {
-    return Type(schema, `z.void()`)
+    return UnsupportedType(schema)
   }
   function UnsupportedType(schema: Types.TSchema) {
-    return `${Type(schema, `z.any()`)} /* unresolved */`
+    return `${Type(`v.any`, null, [])} /* unsupported */`
   }
   function Visit(schema: Types.TSchema): string {
     if (schema.$id !== undefined) reference_map.set(schema.$id, schema)
@@ -217,9 +211,9 @@ export namespace ModelToZod {
     const type = Collect(schema)
     if (recursive_set.has(schema.$id!)) {
       output.push(`export ${ModelToTypeScript.GenerateType(model, schema.$id!)}`)
-      output.push(`export const ${schema.$id || `T`}: z.ZodType<${schema.$id}> = z.lazy(() => ${Formatter.Format(type)})`)
+      output.push(`export const ${schema.$id || `T`}: v.Output<${schema.$id}> = v.lazy(() => ${Formatter.Format(type)})`)
     } else {
-      output.push(`export type ${schema.$id} = z.infer<typeof ${schema.$id}>`)
+      output.push(`export type ${schema.$id} = v.Output<typeof ${schema.$id}>`)
       output.push(`export const ${schema.$id || `T`} = ${Formatter.Format(type)}`)
     }
     if (schema.$id) emitted_set.add(schema.$id)
@@ -232,7 +226,7 @@ export namespace ModelToZod {
     reference_map.clear()
     recursive_set.clear()
     emitted_set.clear()
-    const buffer: string[] = [`import z from 'zod'`, '']
+    const buffer: string[] = [`import v from 'valibot'`, '']
     for (const type of model.types) {
       buffer.push(GenerateType(model, type, model.types))
     }

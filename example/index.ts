@@ -1,9 +1,8 @@
-import { Type, Static } from '@sinclair/typebox'
-import * as Codegen from '@typebox/codegen'
+import * as Codegen from '@sinclair/typebox-codegen'
 import * as util from 'node:util'
 
 function Print(transform: string, code: any) {
-  const data = typeof code === 'string' ? code : util.inspect(code, false, 100)
+  const data = typeof code === 'string' ? Codegen.Formatter.Format(code) : util.inspect(code, false, 100)
   const length = 72
   console.log('┌' + '─'.repeat(length) + '┐')
   console.log('│', transform.padEnd(length - 1) + '│')
@@ -12,32 +11,40 @@ function Print(transform: string, code: any) {
   console.log(data)
   console.log('')
 }
-
 const Code = `
-type T = {
-  /**
-  * @minItems 2
-  * @maxItems 2
-  */
-   a: readonly number[];
- };
+export type A = {
+  x: number,
+  y: string,
+  z: boolean
+}
+
+export type B = {
+  a: number,
+  b: string,
+  c: boolean
+} 
+export type T = A & B 
+
+type M = {[K in keyof T]: 1 }
 `
 // ----------------------------------------------------------------------------
 // Typescript Base
 // ----------------------------------------------------------------------------
-Print('Typescript code (base)', Code)
-
+Print('Typescript', Code)
 // ----------------------------------------------------------------------------
-// Immediate Transform
+// TypeBox Transform
 // ----------------------------------------------------------------------------
 Print('TypeScript To TypeBox', Codegen.TypeScriptToTypeBox.Generate(Code))
-
 // ----------------------------------------------------------------------------
 // Model Transform
 // ----------------------------------------------------------------------------
 const model = Codegen.TypeScriptToModel.Generate(Code)
-Print('TypeScript To Model', model)
-Print('Model To JsonSchema', Codegen.ModelToJsonSchema.Generate(model))
+Print('TypeScript To Inline Model', model)
+Print('Model To JsonSchema Inline', Codegen.ModelToJsonSchema.Generate(model))
 Print('Model To JavaScript', Codegen.ModelToJavaScript.Generate(model))
 Print('Model To TypeScript', Codegen.ModelToTypeScript.Generate(model))
+Print('Model To Valibot', Codegen.ModelToValibot.Generate(model))
+Print('Model To Value', Codegen.ModelToValue.Generate(model))
+Print('Model To Yup', Codegen.ModelToYup.Generate(model))
 Print('Model To Zod', Codegen.ModelToZod.Generate(model))
+Print('Model To ArkType', Codegen.ModelToArkType.Generate(model))
