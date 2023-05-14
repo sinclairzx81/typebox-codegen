@@ -24,8 +24,8 @@ THE SOFTWARE.
 
 ---------------------------------------------------------------------------*/
 
+import { JsDoc, Formatter } from '../common/index'
 import * as ts from 'typescript'
-import { addOptionsToType, generateOptionsBasedOnJsDocOfNode } from './jsdoc-to-typebox'
 
 export class TypeScriptToTypeBoxError extends Error {
   constructor(public readonly diagnostics: ts.Diagnostic[]) {
@@ -109,6 +109,21 @@ export namespace TypeScriptToTypeBox {
     return node.flags === ts.NodeFlags.Namespace
   }
   // ------------------------------------------------------------------------------------------------------------
+  // Options
+  // ------------------------------------------------------------------------------------------------------------
+  function ResolveJsDocComment(node: ts.TypeAliasDeclaration | ts.PropertySignature | ts.InterfaceDeclaration): string {
+    const content = node.getFullText().trim()
+    if (content.indexOf('/**') !== 0) return ''
+    for (let i = 0; i < content.length; i++) {
+      if (content[i] === '*' && content[i + 1] === '/') return content.slice(0, i + 2)
+    }
+    return ''
+  }
+  function ResolveOptions(node: ts.TypeAliasDeclaration | ts.PropertySignature | ts.InterfaceDeclaration): Record<string, unknown> {
+    const content = ResolveJsDocComment(node)
+    return JsDoc.Parse(content)
+  }
+  // ------------------------------------------------------------------------------------------------------------
   // Identifiers
   // ------------------------------------------------------------------------------------------------------------
   function ResolveIdentifier(node: ts.InterfaceDeclaration | ts.TypeAliasDeclaration) {
@@ -118,23 +133,31 @@ export namespace TypeScriptToTypeBox {
     }
     return [...resolve(node), node.name.getText()].join('.')
   }
+  function UnwrapModifier(type: string) {
+    for (let i = 0; i < type.length; i++) if (type[i] === '(') return type.slice(i + 1, type.length - 1)
+    return type
+  }
   // Note: This function is only called when 'useIdentifiers' is true. What we're trying to achieve with
   // identifier injection is a referential type model over the default inline model. For the purposes of
   // code generation, we tend to prefer referential types as these can be both inlined or referenced in
   // the codegen target; and where different targets may have different referential requirements. It
   // should be possible to implement a more robust injection mechanism however. For review.
-  function InjectIdentifier($id: string, type: string, useOptions: boolean) {
-    const options = useOptions ? `{ $id: '${$id}', ...options }` : `{ $id: '${$id}' }`
-    if (!useIdentifiers) return type
+  function InjectOptions(type: string, options: Record<string, unknown>): string {
+    if (globalThis.Object.keys(options).length === 0) return type
+    // unwrap for modifiers
+    if (type.indexOf('Type.ReadonlyOptional') === 0) return `Type.ReadonlyOptional( ${InjectOptions(UnwrapModifier(type), options)} )`
+    if (type.indexOf('Type.Readonly') === 0) return `Type.Readonly( ${InjectOptions(UnwrapModifier(type), options)} )`
+    if (type.indexOf('Type.Optional') === 0) return `Type.Optional( ${InjectOptions(UnwrapModifier(type), options)} )`
+    const encoded = JSON.stringify(options)
     // indexer type
     if (type.lastIndexOf(']') === type.length - 1) useTypeClone = true
-    if (type.lastIndexOf(']') === type.length - 1) return `TypeClone.Clone(${type}, ${options})`
+    if (type.lastIndexOf(']') === type.length - 1) return `TypeClone.Clone(${type}, ${encoded})`
     // referenced type
-    if (type.indexOf('(') === -1) return `Type.Ref(${type}, ${options})`
-    if (type.lastIndexOf('()') === type.length - 2) return type.slice(0, type.length - 1) + `${options})`
-    if (type.lastIndexOf('})') === type.length - 2) return type.slice(0, type.length - 1) + `, ${options})`
-    if (type.lastIndexOf('])') === type.length - 2) return type.slice(0, type.length - 1) + `, ${options})`
-    if (type.lastIndexOf(')') === type.length - 1) return type.slice(0, type.length - 1) + `, ${options})`
+    if (type.indexOf('(') === -1) return `Type.Ref(${type}, ${encoded})`
+    if (type.lastIndexOf('()') === type.length - 2) return type.slice(0, type.length - 1) + `${encoded})`
+    if (type.lastIndexOf('})') === type.length - 2) return type.slice(0, type.length - 1) + `, ${encoded})`
+    if (type.lastIndexOf('])') === type.length - 2) return type.slice(0, type.length - 1) + `, ${encoded})`
+    if (type.lastIndexOf(')') === type.length - 1) return type.slice(0, type.length - 1) + `, ${encoded})`
     return type
   }
   // ------------------------------------------------------------------------------------------------------------
@@ -147,23 +170,22 @@ export namespace TypeScriptToTypeBox {
   }
   function* PropertySignature(node: ts.PropertySignature): IterableIterator<string> {
     const [readonly, optional] = [IsReadonlyProperty(node), IsOptionalProperty(node)]
-    const type = Collect(node.type)
+    const options = ResolveOptions(node)
+    const type_0 = Collect(node.type)
+    const type_1 = InjectOptions(type_0, options)
     if (readonly && optional) {
-      return yield `${node.name.getText()}: Type.ReadonlyOptional(${type})`
+      return yield `${node.name.getText()}: Type.ReadonlyOptional(${type_1})`
     } else if (readonly) {
-      return yield `${node.name.getText()}: Type.Readonly(${type})`
+      return yield `${node.name.getText()}: Type.Readonly(${type_1})`
     } else if (optional) {
-      return yield `${node.name.getText()}: Type.Optional(${type})`
+      return yield `${node.name.getText()}: Type.Optional(${type_1})`
     } else {
-      return yield `${node.name.getText()}: ${type}`
+      return yield `${node.name.getText()}: ${type_1}`
     }
   }
   function* ArrayTypeNode(node: ts.ArrayTypeNode): IterableIterator<string> {
-    const arrayJsonSchemaOptions = schemaOptions.pop()
     const type = Collect(node.elementType)
-    const arrayTypeWithoutOptions = `Type.Array(${type})`
-    // yield arrayTypeWithoutOptions;
-    yield arrayJsonSchemaOptions === undefined ? arrayTypeWithoutOptions : addOptionsToType(arrayTypeWithoutOptions, arrayJsonSchemaOptions)
+    yield `Type.Array(${type})`
   }
   function* Block(node: ts.Block): IterableIterator<string> {
     blockLevel += 1
@@ -175,14 +197,9 @@ export namespace TypeScriptToTypeBox {
     const types = node.elements.map((type) => Collect(type)).join(',\n')
     yield `Type.Tuple([\n${types}\n])`
   }
-  // TODO: I don't know to much about unions in JSON schema. Are there even
-  // options that can be passed to unions? Or should we drop this and simply pop
-  // the schemaOptions?
   function* UnionTypeNode(node: ts.UnionTypeNode): IterableIterator<string> {
-    const unionJsonSchemaOptions = schemaOptions.pop()
     const types = node.types.map((type) => Collect(type)).join(',\n')
-    const unionWithoutOptions = `Type.Union([\n${types}\n])`
-    yield unionJsonSchemaOptions === undefined ? unionWithoutOptions : addOptionsToType(unionWithoutOptions, unionJsonSchemaOptions)
+    yield `Type.Union([\n${types}\n])`
   }
   function* MethodSignature(node: ts.MethodSignature): IterableIterator<string> {
     const parameters = node.parameters.map((parameter) => (parameter.dotDotDotToken !== undefined ? `...Type.Rest(${Collect(parameter)})` : Collect(parameter))).join(', ')
@@ -262,13 +279,14 @@ export namespace TypeScriptToTypeBox {
   }
   function* InterfaceDeclaration(node: ts.InterfaceDeclaration): IterableIterator<string> {
     useImports = true
-    const jsonSchemaOptions = generateOptionsBasedOnJsDocOfNode(node)
     const isRecursiveType = IsRecursiveType(node)
     if (isRecursiveType) recursiveDeclaration = node
     const heritage = node.heritageClauses !== undefined ? node.heritageClauses.flatMap((node) => Collect(node)) : []
     if (node.typeParameters) {
       useGenerics = true
       const exports = IsExport(node) ? 'export ' : ''
+      const identifier = ResolveIdentifier(node)
+      const options = useIdentifiers ? { ...ResolveOptions(node), $id: identifier } : { ...ResolveOptions(node) }
       const constraints = node.typeParameters.map((param) => `${Collect(param)} extends TSchema`).join(', ')
       const parameters = node.typeParameters.map((param) => `${Collect(param)}: ${Collect(param)}`).join(', ')
       const names = node.typeParameters.map((param) => `${Collect(param)}`).join(', ')
@@ -276,54 +294,48 @@ export namespace TypeScriptToTypeBox {
       const staticDeclaration = `${exports}type ${node.name.getText()}<${constraints}> = Static<ReturnType<typeof ${node.name.getText()}<${names}>>>`
       const rawTypeExpression = IsRecursiveType(node) ? `Type.Recursive(This => Type.Object(${members}))` : `Type.Object(${members})`
       const typeExpression = heritage.length === 0 ? rawTypeExpression : `Type.Intersect([${heritage.join(', ')}, ${rawTypeExpression}])`
-      const type = InjectIdentifier(ResolveIdentifier(node), typeExpression, true && useIdentifiers)
-      const options = (true && useIdentifiers) ? ', options: SchemaOptions = {}' : ''
-      useOptions = useOptions || (true && useIdentifiers) // todo: refactor this
-      const typeDeclaration = `${exports}const ${node.name.getText()} = <${constraints}>(${parameters}${options}) => ${type}`
+      const type = InjectOptions(typeExpression, options)
+      const typeDeclaration = `${exports}const ${node.name.getText()} = <${constraints}>(${parameters}) => ${type}`
       yield `${staticDeclaration}\n${typeDeclaration}`
     } else {
       const exports = IsExport(node) ? 'export ' : ''
-      schemaOptions.push(jsonSchemaOptions)
+      const identifier = ResolveIdentifier(node)
+      const options = useIdentifiers ? { ...ResolveOptions(node), $id: identifier } : { ...ResolveOptions(node) }
       const members = PropertiesFromTypeElementArray(node.members)
       const staticDeclaration = `${exports}type ${node.name.getText()} = Static<typeof ${node.name.getText()}>`
       const rawTypeExpression = IsRecursiveType(node) ? `Type.Recursive(This => Type.Object(${members}))` : `Type.Object(${members})`
       const typeExpression = heritage.length === 0 ? rawTypeExpression : `Type.Intersect([${heritage.join(', ')}, ${rawTypeExpression}])`
-      const type = InjectIdentifier(ResolveIdentifier(node), typeExpression, false)
+      const type = InjectOptions(typeExpression, options)
       const typeDeclaration = `${exports}const ${node.name.getText()} = ${type}`
       yield `${staticDeclaration}\n${typeDeclaration}`
     }
     typeNames.add(node.name.getText())
     recursiveDeclaration = null
   }
-
-  let schemaOptions: Record<any, any>[] = []
-
   function* TypeAliasDeclaration(node: ts.TypeAliasDeclaration): IterableIterator<string> {
     useImports = true
-    const jsonSchemaOptions = generateOptionsBasedOnJsDocOfNode(node)
     const isRecursiveType = IsRecursiveType(node)
     if (isRecursiveType) recursiveDeclaration = node
     // Generics case
     if (node.typeParameters) {
       useGenerics = true
       const exports = IsExport(node) ? 'export ' : ''
+      const options = useIdentifiers ? { $id: ResolveIdentifier(node) } : {}
       const constraints = node.typeParameters.map((param) => `${Collect(param)} extends TSchema`).join(', ')
       const parameters = node.typeParameters.map((param) => `${Collect(param)}: ${Collect(param)}`).join(', ')
       const names = node.typeParameters.map((param) => Collect(param)).join(', ')
       const type_0 = Collect(node.type)
       const type_1 = isRecursiveType ? `Type.Recursive(This => ${type_0})` : type_0
-      const type_2 = InjectIdentifier(ResolveIdentifier(node), type_1, true && useIdentifiers)
-      const options = (true && useIdentifiers) ? ', options: SchemaOptions = {}' : ''
-      useOptions = useOptions || (true && useIdentifiers) // todo: refactor this
+      const type_2 = InjectOptions(type_1, options)
       const staticDeclaration = `${exports}type ${node.name.getText()}<${constraints}> = Static<ReturnType<typeof ${node.name.getText()}<${names}>>>`
-      const typeDeclaration = `${exports}const ${node.name.getText()} = <${constraints}>(${parameters}${options}) => ${type_2}`
+      const typeDeclaration = `${exports}const ${node.name.getText()} = <${constraints}>(${parameters}) => ${type_2}`
       yield `${staticDeclaration}\n${typeDeclaration}`
     } else {
       const exports = IsExport(node) ? 'export ' : ''
-      schemaOptions.push(jsonSchemaOptions)
+      const options = useIdentifiers ? { $id: ResolveIdentifier(node), ...ResolveOptions(node) } : { ...ResolveOptions(node) }
       const type_0 = Collect(node.type)
       const type_1 = isRecursiveType ? `Type.Recursive(This => ${type_0})` : type_0
-      const type_2 = InjectIdentifier(ResolveIdentifier(node), type_1, false)
+      const type_2 = InjectOptions(type_1, options)
       const staticDeclaration = `${exports}type ${node.name.getText()} = Static<typeof ${node.name.getText()}>`
       const typeDeclaration = `${exports}const ${node.name.getText()} = ${type_2}`
       yield `${staticDeclaration}\n${typeDeclaration}`
@@ -458,24 +470,9 @@ export namespace TypeScriptToTypeBox {
     if (ts.isSourceFile(node)) return yield* SourceFile(node)
     if (node.kind === ts.SyntaxKind.ExportKeyword) return yield `export`
     if (node.kind === ts.SyntaxKind.KeyOfKeyword) return yield `Type.KeyOf()`
-    if (node.kind === ts.SyntaxKind.NumberKeyword) {
-      const jsonSchemaOptions = schemaOptions.pop()
-      if (jsonSchemaOptions === undefined || Object.keys(jsonSchemaOptions).length === 0) {
-        return yield `Type.Number()`
-      }
-      return yield `Type.Number(${JSON.stringify(jsonSchemaOptions)})`
-    }
-    // TODO: Probably add function to add types correctly here (also for
-    // boolean) probably need more knowledge of json schema to know which types
-    // even should get options here!
+    if (node.kind === ts.SyntaxKind.NumberKeyword) return yield `Type.Number()`
     if (node.kind === ts.SyntaxKind.BigIntKeyword) return yield `Type.BigInt()`
-    if (node.kind === ts.SyntaxKind.StringKeyword) {
-      const jsonSchemaOptions = schemaOptions.pop()
-      if (jsonSchemaOptions === undefined || Object.keys(jsonSchemaOptions).length === 0) {
-        return yield `Type.String()`
-      }
-      return yield `Type.String(${JSON.stringify(jsonSchemaOptions)})`
-    }
+    if (node.kind === ts.SyntaxKind.StringKeyword) return yield `Type.String()`
     if (node.kind === ts.SyntaxKind.SymbolKeyword) return yield `Type.Symbol()`
     if (node.kind === ts.SyntaxKind.BooleanKeyword) return yield `Type.Boolean()`
     if (node.kind === ts.SyntaxKind.UndefinedKeyword) return yield `Type.Undefined()`
@@ -526,6 +523,6 @@ export namespace TypeScriptToTypeBox {
     if (assertion.diagnostics && assertion.diagnostics.length > 0) {
       throw new TypeScriptToTypeBoxError(assertion.diagnostics)
     }
-    return typescript
+    return Formatter.Format(typescript)
   }
 }
