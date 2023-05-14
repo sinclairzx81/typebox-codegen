@@ -54,6 +54,21 @@ export interface TypeScriptToTypeBoxOptions {
    * for TypeBox which can operate on vanilla JS references. The default is false.
    */
   useIdentifiers: boolean
+  /**
+   * Specifies the formatting function that is run after all code was generated.
+   * Defaults to running prettier with the config:
+   * ```
+   * printWidth: 240,
+   * semi: false,
+   * singleQuote: true,
+   * trailingComma: 'none'
+   * ```
+   *
+   * Use this if you either want custom formatting or you want to skip running a
+   * formatter at all (pass the identity function then).
+   *
+   */
+  formattingFunction?: (input: string) => string
 }
 /** Generates TypeBox types from TypeScript code */
 export namespace TypeScriptToTypeBox {
@@ -524,6 +539,6 @@ export namespace TypeScriptToTypeBox {
     if (assertion.diagnostics && assertion.diagnostics.length > 0) {
       throw new TypeScriptToTypeBoxError(assertion.diagnostics)
     }
-    return Formatter.Format(typescript)
+    return options.formattingFunction === undefined ? Formatter.Format(typescript) : options.formattingFunction(typescript)
   }
 }

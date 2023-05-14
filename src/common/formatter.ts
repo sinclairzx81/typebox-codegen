@@ -32,9 +32,10 @@ export namespace Formatter {
     return prettier.format(code, {
       parser: 'typescript',
       plugins: [prettier_typescript],
-      trailingComma: 'none',
-      singleQuote: true,
+      printWidth: 240,
       semi: false,
+      singleQuote: true,
+      trailingComma: 'none',
     })
   }
 }
