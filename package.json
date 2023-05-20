@@ -33,9 +33,9 @@
     "typescript": "^5.0.4"
   },
   "prettier": {
+    "printWidth": 240,
     "semi": false,
     "singleQuote": true,
-    "printWidth": 240,
     "trailingComma": "all"
   }
 }
