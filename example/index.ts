@@ -28,11 +28,11 @@ export interface Vector {
    */
   x: number
   /**
-   * @default 2
+   * @minimum 2
    */
   y: number
   /**
-   * @default 3
+   * @minimum 3
    */
   z: number
 }
@@ -46,6 +46,7 @@ Print('Typescript code (base)', Code)
 // Immediate Transform
 // ----------------------------------------------------------------------------
 Print('TypeScript To TypeBox', Codegen.TypeScriptToTypeBox.Generate(Code))
+
 
 // ----------------------------------------------------------------------------
 // Model Transform
