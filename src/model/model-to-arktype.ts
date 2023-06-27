@@ -123,7 +123,7 @@ export namespace ModelToArkType {
     return Composite(types, '&')
   }
   function Literal(schema: Types.TLiteral) {
-    return Wrap(schema.const.toString())
+    return typeof schema.const === 'string' ? Wrap(`"${schema.const}"`) : Wrap(schema.const.toString())
   }
   function Never(schema: Types.TNever) {
     return Wrap('never')
