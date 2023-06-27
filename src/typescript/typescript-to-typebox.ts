@@ -25,6 +25,7 @@ THE SOFTWARE.
 ---------------------------------------------------------------------------*/
 
 import { JsDoc } from '../common/jsdoc'
+import { Formatter } from '../common/formatter'
 import * as ts from 'typescript'
 
 export class TypeScriptToTypeBoxError extends Error {
@@ -39,6 +40,13 @@ export class TypeScriptToTypeBoxError extends Error {
 export type ReferenceModel = 'inline' | 'ordered' | 'cyclic'
 
 export interface TypeScriptToTypeBoxOptions {
+  /**
+   * Specifies the output reference model used to reference types. The `inline` model uses
+   * inline ordered JavaScript references. The `ordered` model uses `Type.Ref()` and requires
+   * type ordering. The `cyclic` model generates synthetic references via `Type.Unsafe()` at
+   * a cost of losing static type information. The default is `inline`
+   */
+  referenceModel?: ReferenceModel
   /**
    * Setting this to true will ensure all types are exports as const values. This setting is
    * used by the TypeScriptToTypeBoxModel to gather TypeBox definitions during runtime eval
@@ -57,14 +65,6 @@ export interface TypeScriptToTypeBoxOptions {
    * for TypeBox which can operate on vanilla JS references. The default is false.
    */
   useIdentifiers?: boolean
-  /**
-   * Specifies the output reference model used to reference types. The `inline` model uses
-   * JavaScript references to cross reference types. The `ordered` model uses `Type.Ref()` 
-   * and requires topological ordering of types. The `cyclic` model generates synthetic 
-   * references via `Type.Unsafe()` at a cost of losing static type information. The default
-   * is `inline`
-   */
-  useReferences?: ReferenceModel
 }
 /** Generates TypeBox types from TypeScript code */
 export namespace TypeScriptToTypeBox {
@@ -80,6 +80,8 @@ export namespace TypeScriptToTypeBox {
   // ------------------------------------------------------------------------------------------------------------
   // Transpile States
   // ------------------------------------------------------------------------------------------------------------
+  // (auto) tracked on calls to find type name
+  const typenames = new Set<string>()
   // (auto) tracked for recursive types and used to associate This type references
   let recursiveDeclaration: ts.TypeAliasDeclaration | ts.InterfaceDeclaration | null = null
   // (auto) tracked for scoped block level definitions and used to prevent `export` emit when not in global scope.
@@ -92,14 +94,12 @@ export namespace TypeScriptToTypeBox {
   let useGenerics = false
   // (auto) tracked for cases where composition requires deep clone
   let useTypeClone = false
-  // (auto) tracked for each generated type.
-  const typeNames = new Set<string>()
   // (option) export override to ensure all schematics
   let useExportsEverything = false
   // (option) inject identifiers
   let useIdentifiers = false
   // (option) specifies the referencing model.
-  let useReferences = 'inline' as ReferenceModel
+  let referenceModel = 'inline' as ReferenceModel
   // (option) specifies if typebox imports should be included
   let useTypeBoxImport = true
   // ------------------------------------------------------------------------------------------------------------
@@ -108,12 +108,12 @@ export namespace TypeScriptToTypeBox {
   function FindRecursiveParent(decl: ts.InterfaceDeclaration | ts.TypeAliasDeclaration, node: ts.Node): boolean {
     return (ts.isTypeReferenceNode(node) && decl.name.getText() === node.typeName.getText()) || node.getChildren().some((node) => FindRecursiveParent(decl, node))
   }
-  function FindTypeName(node: ts.Node, name: string): boolean { // expect ts.SourceFile
-    return node.getChildren().some((node) => {
-      return ((
-        ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node)
-      ) && node.name.getText() === name) || FindTypeName(node, name)
+  function FindTypeName(node: ts.Node, name: string): boolean {
+    const found = typenames.has(name) || node.getChildren().some((node) => {
+      return ((ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node)) && node.name.getText() === name) || FindTypeName(node, name)
     })
+    if(found) typenames.add(name)
+    return found
   }
   function IsRecursiveType(decl: ts.InterfaceDeclaration | ts.TypeAliasDeclaration) {
     return ts.isTypeAliasDeclaration(decl) ? [decl.type].some((node) => FindRecursiveParent(decl, node)) : decl.members.some((node) => FindRecursiveParent(decl, node))
@@ -281,7 +281,6 @@ export namespace TypeScriptToTypeBox {
     const enumType = `${exports}enum ${node.name.getText()}Enum { ${members} }`
     const type = `${exports}const ${node.name.getText()} = Type.Enum(${node.name.getText()}Enum)`
     yield [enumType, '', type].join('\n')
-    typeNames.add(node.name.getText())
   }
   function PropertiesFromTypeElementArray(members: ts.NodeArray<ts.TypeElement>): string {
     const properties = members.filter((member) => !ts.isIndexSignatureDeclaration(member))
@@ -332,7 +331,6 @@ export namespace TypeScriptToTypeBox {
       const typeDeclaration = `${exports}const ${node.name.getText()} = ${type}`
       yield `${staticDeclaration}\n${typeDeclaration}`
     }
-    typeNames.add(node.name.getText())
     recursiveDeclaration = null
   }
   function* TypeAliasDeclaration(node: ts.TypeAliasDeclaration): IterableIterator<string> {
@@ -363,7 +361,6 @@ export namespace TypeScriptToTypeBox {
       const typeDeclaration = `${exports}const ${node.name.getText()} = ${type_2}`
       yield `${staticDeclaration}\n${typeDeclaration}`
     }
-    typeNames.add(node.name.getText())
     recursiveDeclaration = null
   }
   function* HeritageClause(node: ts.HeritageClause): IterableIterator<string> {
@@ -423,11 +420,14 @@ export namespace TypeScriptToTypeBox {
     if (name === 'Exclude') return yield `Type.Exclude${args}`
     if (name === 'Extract') return yield `Type.Extract${args}`
     if (recursiveDeclaration !== null && FindRecursiveParent(recursiveDeclaration, node)) return yield `This`
-    if (FindTypeName(node.getSourceFile(), name)) {
-      switch(useReferences) {
-        case 'cyclic': return yield `Type.Unsafe({ [Kind]: 'Ref', $ref: '${name}' })`
-        case 'ordered': return yield `Type.Ref(${name})`
-        case 'inline': return yield `${name}${args}`
+    if (FindTypeName(node.getSourceFile(), name) && args.length === 0 /** non-resolvable */) { 
+      switch (referenceModel) {
+        case 'cyclic':
+          return yield `Type.Unsafe({ [Kind]: 'Ref', $ref: '${name}' })`
+        case 'ordered':
+          return yield `Type.Ref(${name})`
+        case 'inline':
+          return yield `${name}${args}`
       }
     }
     if (name in globalThis) return yield `Type.Never()`
@@ -522,19 +522,19 @@ export namespace TypeScriptToTypeBox {
   export function ImportStatement(): string {
     if (!(useImports && useTypeBoxImport)) return ''
     const imported = ['Type', 'Static']
+    if (referenceModel === 'cyclic') imported.push('Kind')
     if (useGenerics) imported.push('TSchema')
     if (useOptions) imported.push('SchemaOptions')
     if (useTypeClone) imported.push('TypeClone')
-    if(useReferences === 'cyclic') imported.push('Kind')
     return `import { ${imported.join(', ')} } from '@sinclair/typebox'`
   }
   /** Generates TypeBox types from TypeScript interface and type definitions */
   export function Generate(typescriptCode: string, options?: TypeScriptToTypeBoxOptions) {
     useExportsEverything = options?.useExportEverything ?? false
     useIdentifiers = options?.useIdentifiers ?? false
-    useReferences = options?.useReferences ?? 'inline'
+    referenceModel = options?.referenceModel ?? 'inline'
     useTypeBoxImport = options?.useTypeBoxImport ?? true
-    typeNames.clear()
+    typenames.clear()
     useImports = false
     useOptions = false
     useGenerics = false
@@ -548,6 +548,6 @@ export namespace TypeScriptToTypeBox {
     if (assertion.diagnostics && assertion.diagnostics.length > 0) {
       throw new TypeScriptToTypeBoxError(assertion.diagnostics)
     }
-    return typescript
+    return Formatter.Format(typescript)
   }
 }
