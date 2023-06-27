@@ -109,10 +109,12 @@ export namespace TypeScriptToTypeBox {
     return (ts.isTypeReferenceNode(node) && decl.name.getText() === node.typeName.getText()) || node.getChildren().some((node) => FindRecursiveParent(decl, node))
   }
   function FindTypeName(node: ts.Node, name: string): boolean {
-    const found = typenames.has(name) || node.getChildren().some((node) => {
-      return ((ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node)) && node.name.getText() === name) || FindTypeName(node, name)
-    })
-    if(found) typenames.add(name)
+    const found =
+      typenames.has(name) ||
+      node.getChildren().some((node) => {
+        return ((ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node)) && node.name.getText() === name) || FindTypeName(node, name)
+      })
+    if (found) typenames.add(name)
     return found
   }
   function IsRecursiveType(decl: ts.InterfaceDeclaration | ts.TypeAliasDeclaration) {
@@ -420,7 +422,7 @@ export namespace TypeScriptToTypeBox {
     if (name === 'Exclude') return yield `Type.Exclude${args}`
     if (name === 'Extract') return yield `Type.Extract${args}`
     if (recursiveDeclaration !== null && FindRecursiveParent(recursiveDeclaration, node)) return yield `This`
-    if (FindTypeName(node.getSourceFile(), name) && args.length === 0 /** non-resolvable */) { 
+    if (FindTypeName(node.getSourceFile(), name) && args.length === 0 /** non-resolvable */) {
       switch (referenceModel) {
         case 'cyclic':
           return yield `Type.Unsafe({ [Kind]: 'Ref', $ref: '${name}' })`
