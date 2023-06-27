@@ -163,7 +163,7 @@ export namespace ModelToArkType {
     return Wrap(schema.$ref)
   }
   function This(schema: Types.TThis) {
-    return Wrap('this')
+    return Wrap(schema.$ref)
   }
   function Tuple(schema: Types.TTuple) {
     if (schema.items === undefined) return `[]`
