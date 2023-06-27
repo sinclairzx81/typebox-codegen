@@ -25,7 +25,8 @@
   "devDependencies": {
     "@sinclair/hammer": "^0.17.2",
     "@types/node": "^18.15.11",
-    "@types/prettier": "^2.7.2"
+    "@types/prettier": "^2.7.2",
+    "arktype": "^1.0.14-alpha"
   },
   "dependencies": {
     "@sinclair/typebox": "^0.28.10",
