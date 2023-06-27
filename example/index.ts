@@ -24,7 +24,7 @@ export type T = string | number
  */
 export interface Vector {
   /**
-   * @default 1
+   * @minimum 1
    */
   x: number
   /**
@@ -50,10 +50,13 @@ Print('TypeScript To TypeBox', Codegen.TypeScriptToTypeBox.Generate(Code))
 // ----------------------------------------------------------------------------
 // Model Transform
 // ----------------------------------------------------------------------------
-const model = Codegen.TypeScriptToModel.Generate(Code)
-Print('TypeScript To Model', model)
-Print('Model To JsonSchema', Codegen.ModelToJsonSchema.Generate(model))
-Print('Model To JavaScript', Codegen.ModelToJavaScript.Generate(model))
-Print('Model To TypeScript', Codegen.ModelToTypeScript.Generate(model))
-Print('Model To Value', Codegen.ModelToValue.Generate(model))
-Print('Model To Zod', Codegen.ModelToZod.Generate(model))
+const inlineModel = Codegen.TypeScriptToModel.Generate(Code, 'inline')
+Print('TypeScript To Model', inlineModel)
+Print('Model To JsonSchema', Codegen.ModelToJsonSchema.Generate(inlineModel))
+Print('Model To JavaScript', Codegen.ModelToJavaScript.Generate(inlineModel))
+Print('Model To TypeScript', Codegen.ModelToTypeScript.Generate(inlineModel))
+Print('Model To Value', Codegen.ModelToValue.Generate(inlineModel))
+Print('Model To Zod', Codegen.ModelToZod.Generate(inlineModel))
+
+const cyclicModel = Codegen.TypeScriptToModel.Generate(Code, 'cyclic')
+Print('Model To ArkType', Codegen.ModelToArkType.Generate(cyclicModel))

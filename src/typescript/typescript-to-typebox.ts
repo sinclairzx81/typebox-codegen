@@ -25,7 +25,6 @@ THE SOFTWARE.
 ---------------------------------------------------------------------------*/
 
 import { JsDoc } from '../common/jsdoc'
-import { Formatter } from '../common/formatter'
 import * as ts from 'typescript'
 
 export class TypeScriptToTypeBoxError extends Error {
@@ -550,6 +549,6 @@ export namespace TypeScriptToTypeBox {
     if (assertion.diagnostics && assertion.diagnostics.length > 0) {
       throw new TypeScriptToTypeBoxError(assertion.diagnostics)
     }
-    return Formatter.Format(typescript)
+    return typescript
   }
 }
