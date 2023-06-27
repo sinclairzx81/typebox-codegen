@@ -35,6 +35,9 @@ export class TypeScriptToTypeBoxError extends Error {
 // --------------------------------------------------------------------------
 // TypeScriptToTypeBox
 // --------------------------------------------------------------------------
+
+export type ReferenceModel = 'inline' | 'ordered' | 'cyclic'
+
 export interface TypeScriptToTypeBoxOptions {
   /**
    * Setting this to true will ensure all types are exports as const values. This setting is
@@ -54,6 +57,14 @@ export interface TypeScriptToTypeBoxOptions {
    * for TypeBox which can operate on vanilla JS references. The default is false.
    */
   useIdentifiers?: boolean
+  /**
+   * Specifies the output reference model used to reference types. The `inline` model uses
+   * JavaScript references to cross reference types. The `ordered` model uses `Type.Ref()` 
+   * and requires topological ordering of types. The `cyclic` model generates synthetic 
+   * references via `Type.Unsafe()` at a cost of losing static type information. The default
+   * is `inline`
+   */
+  useReferences?: ReferenceModel
 }
 /** Generates TypeBox types from TypeScript code */
 export namespace TypeScriptToTypeBox {
@@ -87,12 +98,22 @@ export namespace TypeScriptToTypeBox {
   let useExportsEverything = false
   // (option) inject identifiers
   let useIdentifiers = false
+  // (option) specifies the referencing model.
+  let useReferences = 'inline' as ReferenceModel
+  // (option) specifies if typebox imports should be included
   let useTypeBoxImport = true
   // ------------------------------------------------------------------------------------------------------------
   // AST Query
   // ------------------------------------------------------------------------------------------------------------
   function FindRecursiveParent(decl: ts.InterfaceDeclaration | ts.TypeAliasDeclaration, node: ts.Node): boolean {
     return (ts.isTypeReferenceNode(node) && decl.name.getText() === node.typeName.getText()) || node.getChildren().some((node) => FindRecursiveParent(decl, node))
+  }
+  function FindTypeName(node: ts.Node, name: string): boolean { // expect ts.SourceFile
+    return node.getChildren().some((node) => {
+      return ((
+        ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node)
+      ) && node.name.getText() === name) || FindTypeName(node, name)
+    })
   }
   function IsRecursiveType(decl: ts.InterfaceDeclaration | ts.TypeAliasDeclaration) {
     return ts.isTypeAliasDeclaration(decl) ? [decl.type].some((node) => FindRecursiveParent(decl, node)) : decl.members.some((node) => FindRecursiveParent(decl, node))
@@ -402,7 +423,13 @@ export namespace TypeScriptToTypeBox {
     if (name === 'Exclude') return yield `Type.Exclude${args}`
     if (name === 'Extract') return yield `Type.Extract${args}`
     if (recursiveDeclaration !== null && FindRecursiveParent(recursiveDeclaration, node)) return yield `This`
-    if (typeNames.has(name)) return yield `${name}${args}`
+    if (FindTypeName(node.getSourceFile(), name)) {
+      switch(useReferences) {
+        case 'cyclic': return yield `Type.Unsafe({ [Kind]: 'Ref', $ref: '${name}' })`
+        case 'ordered': return yield `Type.Ref(${name})`
+        case 'inline': return yield `${name}${args}`
+      }
+    }
     if (name in globalThis) return yield `Type.Never()`
     return yield `${name}${args}`
   }
@@ -498,12 +525,14 @@ export namespace TypeScriptToTypeBox {
     if (useGenerics) imported.push('TSchema')
     if (useOptions) imported.push('SchemaOptions')
     if (useTypeClone) imported.push('TypeClone')
+    if(useReferences === 'cyclic') imported.push('Kind')
     return `import { ${imported.join(', ')} } from '@sinclair/typebox'`
   }
   /** Generates TypeBox types from TypeScript interface and type definitions */
   export function Generate(typescriptCode: string, options?: TypeScriptToTypeBoxOptions) {
     useExportsEverything = options?.useExportEverything ?? false
     useIdentifiers = options?.useIdentifiers ?? false
+    useReferences = options?.useReferences ?? 'inline'
     useTypeBoxImport = options?.useTypeBoxImport ?? true
     typeNames.clear()
     useImports = false
