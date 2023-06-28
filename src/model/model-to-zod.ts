@@ -26,6 +26,7 @@ THE SOFTWARE.
 
 import { Formatter, PropertyEncoder } from '../common/index'
 import { TypeBoxModel } from './model'
+import { ModelToTypeScript } from './model-to-typescript'
 import * as Types from '@sinclair/typebox'
 
 // --------------------------------------------------------------------------
@@ -207,17 +208,16 @@ export namespace ModelToZod {
   function Collect(schema: Types.TSchema) {
     return [...Visit(schema)].join(``)
   }
-  function GenerateType(schema: Types.TSchema, references: Types.TSchema[]) {
+  function GenerateType(model: TypeBoxModel, schema: Types.TSchema, references: Types.TSchema[]) {
     const output: string[] = []
-    if (schema.$id === undefined) schema.$id = `T_Generated`
     for (const reference of references) {
-      if (reference.$id === undefined) return UnsupportedType(schema) // throw new ModelToZodNonReferentialType(JSON.stringify(reference))
+      if (reference.$id === undefined) return UnsupportedType(schema)
       reference_map.set(reference.$id, reference)
     }
     const type = Collect(schema)
     if (recursive_set.has(schema.$id!)) {
-      output.push(`export type ${schema.$id} = z.infer<typeof ${schema.$id}>`)
-      output.push(`export const ${schema.$id || `T`} = z.lazy(() => ${Formatter.Format(type)})`)
+      output.push(`export ${ModelToTypeScript.GenerateType(model, schema.$id!)}`)
+      output.push(`export const ${schema.$id || `T`}: z.ZodType<${schema.$id}> = z.lazy(() => ${Formatter.Format(type)})`)
     } else {
       output.push(`export type ${schema.$id} = z.infer<typeof ${schema.$id}>`)
       output.push(`export const ${schema.$id || `T`} = ${Formatter.Format(type)}`)
@@ -234,8 +234,8 @@ export namespace ModelToZod {
     emitted_set.clear()
     const buffer: string[] = [`import z from 'zod'`, '']
     for (const type of model.types) {
-      buffer.push(GenerateType(type, model.types))
+      buffer.push(GenerateType(model, type, model.types))
     }
-    return Formatter.Format(buffer.join('\n'))
+    return buffer.join('\n')
   }
 }
