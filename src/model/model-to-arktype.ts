@@ -113,13 +113,13 @@ export namespace ModelToArkType {
     return Wrap('boolean')
   }
   function Constructor(schema: Types.TConstructor): string {
-    return `['instanceof', Function]`
+    return Wrap('Function')
   }
   function Date(schema: Types.TDate): string {
-    return `['instanceof', Date]`
+    return Wrap('Date')
   }
   function Function(schema: Types.TFunction) {
-    return `['instanceof', Function]`
+    return Wrap('Function')
   }
   function Integer(schema: Types.TInteger) {
     return ConstrainedNumericType('integer', schema)
@@ -160,7 +160,7 @@ export namespace ModelToArkType {
     return buffer.join(`\n`)
   }
   function Promise(schema: Types.TPromise) {
-    return `['instanceof', Promise]`
+    return Wrap('Promise')
   }
   function Record(schema: Types.TRecord) {
     return Wrap('never') // not sure how to express
@@ -254,7 +254,7 @@ export namespace ModelToArkType {
     buffer.push('// -------------------------------------------------------------')
     buffer.push('// Scope')
     buffer.push('// -------------------------------------------------------------')
-    buffer.push('export const Scope = scope({')
+    buffer.push('export const types = scope({')
     for (const type of model.types) {
       buffer.push(`${GenerateType(type, model.types)},`)
     }
@@ -265,7 +265,7 @@ export namespace ModelToArkType {
     buffer.push('// -------------------------------------------------------------')
     for (const type of model.types) {
       buffer.push(`export type ${type.$id} = typeof ${type.$id}.infer`)
-      buffer.push(`export const ${type.$id} = Scope.${type.$id}`)
+      buffer.push(`export const ${type.$id} = types.${type.$id}`)
     }
     if (useType) {
       buffer.unshift(`import { scope, type } from 'arktype'`, '')

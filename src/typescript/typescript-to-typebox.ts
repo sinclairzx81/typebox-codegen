@@ -410,6 +410,7 @@ export namespace TypeScriptToTypeBox {
     if (name === 'Partial') return yield `Type.Partial${args}`
     if (name === 'Uint8Array') return yield `Type.Uint8Array()`
     if (name === 'Date') return yield `Type.Date()`
+    if (name === 'Function') return yield `Type.Function([], Type.Unknown())`
     if (name === 'Required') return yield `Type.Required${args}`
     if (name === 'Omit') return yield `Type.Omit${args}`
     if (name === 'Pick') return yield `Type.Pick${args}`
