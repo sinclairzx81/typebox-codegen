@@ -51,8 +51,7 @@ export namespace ModelToArkType {
   function Composite(types: string[], operator: string) {
     if (RequiresType(types)) {
       const mapped = types.join(`, '${operator}', `)
-      useType = true
-      return `type([${mapped}])`
+      return `[${mapped}]`
     } else {
       const mapped = types.map((type) => Unwrap(type)).join(` ${operator} `)
       return Wrap(mapped)
@@ -245,33 +244,21 @@ export namespace ModelToArkType {
   }
   const reference_map = new Map<string, Types.TSchema>()
   const emitted_types = new Set<string>()
-  let useType = false
   export function Generate(model: TypeBoxModel): string {
-    useType = false
     reference_map.clear()
     emitted_types.clear()
     const buffer: string[] = []
-    buffer.push('// -------------------------------------------------------------')
-    buffer.push('// Scope')
-    buffer.push('// -------------------------------------------------------------')
     buffer.push('export const types = scope({')
     for (const type of model.types) {
       buffer.push(`${GenerateType(type, model.types)},`)
     }
     buffer.push('}).compile()')
     buffer.push('\n')
-    buffer.push('// -------------------------------------------------------------')
-    buffer.push('// Types')
-    buffer.push('// -------------------------------------------------------------')
     for (const type of model.types) {
       buffer.push(`export type ${type.$id} = typeof ${type.$id}.infer`)
       buffer.push(`export const ${type.$id} = types.${type.$id}`)
     }
-    if (useType) {
-      buffer.unshift(`import { scope, type } from 'arktype'`, '')
-    } else {
-      buffer.unshift(`import { scope } from 'arktype'`, '')
-    }
+    buffer.unshift(`import { scope } from 'arktype'`, '')
     return Formatter.Format(buffer.join('\n'))
   }
 }

@@ -107,6 +107,9 @@ export namespace TypeScriptToTypeBox {
   function FindRecursiveParent(decl: ts.InterfaceDeclaration | ts.TypeAliasDeclaration, node: ts.Node): boolean {
     return (ts.isTypeReferenceNode(node) && decl.name.getText() === node.typeName.getText()) || node.getChildren().some((node) => FindRecursiveParent(decl, node))
   }
+  function FindRecursiveThis(node: ts.Node): boolean {
+    return node.getChildren().some((node) => ts.isThisTypeNode(node) || FindRecursiveThis(node))
+  }
   function FindTypeName(node: ts.Node, name: string): boolean {
     const found =
       typenames.has(name) ||
@@ -117,7 +120,9 @@ export namespace TypeScriptToTypeBox {
     return found
   }
   function IsRecursiveType(decl: ts.InterfaceDeclaration | ts.TypeAliasDeclaration) {
-    return ts.isTypeAliasDeclaration(decl) ? [decl.type].some((node) => FindRecursiveParent(decl, node)) : decl.members.some((node) => FindRecursiveParent(decl, node))
+    const check1 = ts.isTypeAliasDeclaration(decl) ? [decl.type].some((node) => FindRecursiveParent(decl, node)) : decl.members.some((node) => FindRecursiveParent(decl, node))
+    const check2 = ts.isInterfaceDeclaration(decl) && FindRecursiveThis(decl)
+    return check1 || check2
   }
   function IsReadonlyProperty(node: ts.PropertySignature): boolean {
     return node.modifiers !== undefined && node.modifiers.find((modifier) => modifier.getText() === 'readonly') !== undefined
@@ -248,6 +253,9 @@ export namespace TypeScriptToTypeBox {
   }
   function* TemplateTail(node: ts.TemplateTail) {
     if (node.text.length > 0) yield `Type.Literal('${node.text}'), `
+  }
+  function* ThisTypeNode(node: ts.ThisTypeNode) {
+    yield `This`
   }
   function* IntersectionTypeNode(node: ts.IntersectionTypeNode): IterableIterator<string> {
     const types = node.types.map((type) => Collect(type)).join(',\n')
@@ -493,6 +501,7 @@ export namespace TypeScriptToTypeBox {
     if (ts.isTemplateHead(node)) return yield* TemplateHead(node)
     if (ts.isTemplateMiddle(node)) return yield* TemplateMiddle(node)
     if (ts.isTemplateTail(node)) return yield* TemplateTail(node)
+    if (ts.isThisTypeNode(node)) return yield* ThisTypeNode(node)
     if (ts.isTypeAliasDeclaration(node)) return yield* TypeAliasDeclaration(node)
     if (ts.isTypeLiteralNode(node)) return yield* TypeLiteralNode(node)
     if (ts.isTypeOperatorNode(node)) return yield* TypeOperatorNode(node)

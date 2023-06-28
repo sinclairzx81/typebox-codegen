@@ -35,8 +35,11 @@ export namespace ModelToZod {
   function IsDefined<T = any>(value: unknown): value is T {
     return value !== undefined
   }
+  function Type(schema: Types.TSchema, type: string) {
+    return schema.default === undefined ? type : `${type}.default(${JSON.stringify(schema.default)})`
+  }
   function Any(schema: Types.TAny) {
-    return `z.any()`
+    return Type(schema, `z.any()`)
   }
   function Array(schema: Types.TArray) {
     const items = Visit(schema.items)
@@ -44,16 +47,16 @@ export namespace ModelToZod {
     buffer.push(`z.array(${items})`)
     if (IsDefined<number>(schema.minItems)) buffer.push(`.min(${schema.minItems})`)
     if (IsDefined<number>(schema.maxItems)) buffer.push(`.max(${schema.maxItems})`)
-    return buffer.join(``)
+    return Type(schema, buffer.join(``))
   }
   function BigInt(schema: Types.TBigInt) {
-    return `z.bigint()`
+    return Type(schema, `z.bigint()`)
   }
   function Boolean(schema: Types.TBoolean) {
-    return `z.boolean()`
+    return Type(schema, `z.boolean()`)
   }
   function Date(schema: Types.TDate) {
-    return `z.date()`
+    return Type(schema, `z.date()`)
   }
   function Constructor(schema: Types.TConstructor): string {
     return UnsupportedType(schema)
@@ -61,7 +64,7 @@ export namespace ModelToZod {
   function Function(schema: Types.TFunction) {
     const params = schema.parameters.map((param) => Visit(param)).join(`, `)
     const returns = Visit(schema.returns)
-    return `z.function().args(${params}).returns(${returns})`
+    return Type(schema, `z.function().args(${params}).returns(${returns})`)
   }
   function Integer(schema: Types.TInteger) {
     const buffer: string[] = []
@@ -71,34 +74,32 @@ export namespace ModelToZod {
     if (IsDefined<number>(schema.exclusiveMaximum)) buffer.push(`.max(${schema.exclusiveMaximum - 1})`)
     if (IsDefined<number>(schema.exclusiveMinimum)) buffer.push(`.max(${schema.exclusiveMinimum + 1})`)
     if (IsDefined<number>(schema.multipleOf)) buffer.push(`.multipleOf(${schema.multipleOf})`)
-    return buffer.join(``)
+    return Type(schema, buffer.join(``))
   }
   function Intersect(schema: Types.TIntersect) {
-    // note: Zod only supports binary intersection. While correct, this is partially at odds with TypeScript's
-    // ability to distribute across (A & B & C). This code reduces intersection to binary ops.
     function reduce(rest: Types.TSchema[]): string {
       if (rest.length === 0) return `z.never()`
       if (rest.length === 1) return Visit(rest[0])
       const [left, right] = [rest[0], rest.slice(1)]
-      return `z.intersection(${Visit(left)}, ${reduce(right)})`
+      return Type(schema, `z.intersection(${Visit(left)}, ${reduce(right)})`)
     }
     return reduce(schema.allOf)
   }
   function Literal(schema: Types.TLiteral) {
-    return typeof schema.const === `string` ? `z.literal('${schema.const}')` : `z.literal(${schema.const})`
+    return typeof schema.const === `string` ? Type(schema, `z.literal('${schema.const}')`) : Type(schema, `z.literal(${schema.const})`)
   }
   function Never(schema: Types.TNever) {
-    return `z.never()`
+    return Type(schema, `z.never()`)
   }
   function Null(schema: Types.TNull) {
-    return `z.null()`
+    return Type(schema, `z.null()`)
   }
   function String(schema: Types.TString) {
     const buffer: string[] = []
     buffer.push(`z.string()`)
     if (IsDefined<number>(schema.maxLength)) buffer.push(`.max(${schema.maxLength})`)
     if (IsDefined<number>(schema.minLength)) buffer.push(`.min(${schema.minLength})`)
-    return buffer.join(``)
+    return Type(schema, buffer.join(``))
   }
   function Number(schema: Types.TNumber) {
     const buffer: string[] = []
@@ -108,7 +109,7 @@ export namespace ModelToZod {
     if (IsDefined<number>(schema.exclusiveMaximum)) buffer.push(`.max(${schema.exclusiveMaximum - 1})`)
     if (IsDefined<number>(schema.exclusiveMinimum)) buffer.push(`.max(${schema.exclusiveMinimum + 1})`)
     if (IsDefined<number>(schema.multipleOf)) buffer.push(`.multipleOf(${schema.multipleOf})`)
-    return buffer.join(``)
+    return Type(schema, buffer.join(``))
   }
   function Object(schema: Types.TObject) {
     // prettier-ignore
@@ -120,11 +121,11 @@ export namespace ModelToZod {
     const buffer: string[] = []
     buffer.push(`z.object({\n${properties}\n})`)
     if (schema.additionalProperties === false) buffer.push(`.strict()`)
-    return buffer.join(``)
+    return Type(schema, buffer.join(``))
   }
   function Promise(schema: Types.TPromise) {
     const item = Visit(schema.item)
-    return `${item}.promise()`
+    return Type(schema, `${item}.promise()`)
   }
   function Record(schema: Types.TRecord) {
     for (const [key, value] of globalThis.Object.entries(schema.patternProperties)) {
@@ -149,28 +150,28 @@ export namespace ModelToZod {
   function Tuple(schema: Types.TTuple) {
     if (schema.items === undefined) return `[]`
     const items = schema.items.map((schema) => Visit(schema)).join(`, `)
-    return `z.tuple([${items}])`
+    return Type(schema, `z.tuple([${items}])`)
   }
   function TemplateLiteral(schema: Types.TTemplateLiteral) {
-    return `z.string().regex(new RegExp('${schema.pattern}'))`
+    return Type(schema, `z.string().regex(new RegExp('${schema.pattern}'))`)
   }
   function UInt8Array(schema: Types.TUint8Array): string {
-    return `z.instanceof(Uint8Array)`
+    return Type(schema, `z.instanceof(Uint8Array)`)
   }
   function Undefined(schema: Types.TUndefined) {
-    return `z.undefined()`
+    return Type(schema, `z.undefined()`)
   }
   function Union(schema: Types.TUnion) {
-    return `z.union([${schema.anyOf.map((schema) => Visit(schema)).join(`, `)}])`
+    return Type(schema, `z.union([${schema.anyOf.map((schema) => Visit(schema)).join(`, `)}])`)
   }
   function Unknown(schema: Types.TUnknown) {
-    return `z.unknown()`
+    return Type(schema, `z.unknown()`)
   }
   function Void(schema: Types.TVoid) {
-    return `z.void()`
+    return Type(schema, `z.void()`)
   }
   function UnsupportedType(schema: Types.TSchema) {
-    return `z.any(/* ${schema[Types.Kind]} */)`
+    return Type(schema, `z.any(/* ${schema[Types.Kind]} */)`)
   }
   function Visit(schema: Types.TSchema): string {
     if (schema.$id !== undefined) reference_map.set(schema.$id, schema)
@@ -215,15 +216,9 @@ export namespace ModelToZod {
     }
     const type = Collect(schema)
     if (recursive_set.has(schema.$id!)) {
-      output.push(`// -------------------------------------------------------------`)
-      output.push(`// ${schema.$id!}`)
-      output.push(`// -------------------------------------------------------------`)
       output.push(`export type ${schema.$id} = z.infer<typeof ${schema.$id}>`)
       output.push(`export const ${schema.$id || `T`} = z.lazy(() => ${Formatter.Format(type)})`)
     } else {
-      output.push(`// -------------------------------------------------------------`)
-      output.push(`// Type: ${schema.$id!}`)
-      output.push(`// -------------------------------------------------------------`)
       output.push(`export type ${schema.$id} = z.infer<typeof ${schema.$id}>`)
       output.push(`export const ${schema.$id || `T`} = ${Formatter.Format(type)}`)
     }

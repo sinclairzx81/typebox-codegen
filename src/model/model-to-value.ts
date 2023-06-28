@@ -31,9 +31,13 @@ import { Value } from '@sinclair/typebox/value'
 export namespace ModelToValue {
   export function Generate(model: TypeBoxModel): string {
     const definitions: string[] = []
+
     for (const type of model.types) {
-      definitions.push(`export const ${type.$id!} = ${JSON.stringify(Value.Create(type))};`)
+      definitions.push(`
+      export const ${type.$id!} = ${JSON.stringify(Value.Create(type))};
+      `)
     }
-    return Formatter.Format(definitions.join('\n\n'))
+    const output = [...definitions]
+    return Formatter.Format(output.join('\n\n'))
   }
 }

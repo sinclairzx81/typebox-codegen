@@ -14,27 +14,20 @@ function Print(transform: string, code: any) {
 }
 
 const Code = `
-/**
- * @description 'A union type'
- */
-export type T = string | number
-
-/**
- * @description 'A vector type'
- */
 export interface Vector {
-  /**
-   * @minimum 1
+  /** 
+   * @default 1 
    */
   x: number
-  /**
-   * @minimum 2
+  /** 
+   * @default 2 
    */
   y: number
-  /**
-   * @minimum 3
-   */
-  z: number
+}
+
+export interface Node {
+  id: string
+  nodes: this[]
 }
 `
 // ----------------------------------------------------------------------------
@@ -47,16 +40,18 @@ Print('Typescript code (base)', Code)
 // ----------------------------------------------------------------------------
 Print('TypeScript To TypeBox', Codegen.TypeScriptToTypeBox.Generate(Code))
 
-// ----------------------------------------------------------------------------
-// Model Transform
-// ----------------------------------------------------------------------------
+// // ----------------------------------------------------------------------------
+// // Model Transform
+// // ----------------------------------------------------------------------------
 const inlineModel = Codegen.TypeScriptToModel.Generate(Code, 'inline')
-Print('TypeScript To Model', inlineModel)
-Print('Model To JsonSchema', Codegen.ModelToJsonSchema.Generate(inlineModel))
+Print('TypeScript To Inline Model', inlineModel)
+Print('Model To JsonSchema Inline', Codegen.ModelToJsonSchema.Generate(inlineModel))
 Print('Model To JavaScript', Codegen.ModelToJavaScript.Generate(inlineModel))
 Print('Model To TypeScript', Codegen.ModelToTypeScript.Generate(inlineModel))
 Print('Model To Value', Codegen.ModelToValue.Generate(inlineModel))
 Print('Model To Zod', Codegen.ModelToZod.Generate(inlineModel))
 
 const cyclicModel = Codegen.TypeScriptToModel.Generate(Code, 'cyclic')
+Print('TypeScript To Cyclic Model', cyclicModel)
+Print('Model To JsonSchema Cyclic', Codegen.ModelToJsonSchema.Generate(cyclicModel))
 Print('Model To ArkType', Codegen.ModelToArkType.Generate(cyclicModel))

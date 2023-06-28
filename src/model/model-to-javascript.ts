@@ -31,9 +31,13 @@ import { TypeCompiler } from '@sinclair/typebox/compiler'
 export namespace ModelToJavaScript {
   export function Generate(model: TypeBoxModel): string {
     const definitions: string[] = []
+    const header = `// @ts-nocheck`
     for (const type of model.types) {
-      definitions.push(`export const ${type.$id!} = (function() { ${TypeCompiler.Code(type)} })();`)
+      definitions.push(`export const ${type.$id!} = (() => { 
+        ${TypeCompiler.Code(type, [], { language: 'javascript' })} 
+      })()`)
     }
-    return Formatter.Format(definitions.join('\n\n'))
+    const output = [header, ...definitions]
+    return Formatter.Format(output.join('\n\n'))
   }
 }

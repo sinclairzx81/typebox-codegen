@@ -31,8 +31,11 @@ export namespace ModelToJsonSchema {
   export function Generate(model: TypeBoxModel): string {
     const definitions: string[] = []
     for (const type of model.types) {
-      definitions.push(`export const ${type.$id!} = ${JSON.stringify(type)}`)
+      definitions.push(`
+      export const ${type.$id!} = ${JSON.stringify(type)}
+      `)
     }
-    return Formatter.Format(definitions.join('\n\n'))
+    const output = [...definitions]
+    return Formatter.Format(output.join('\n\n'))
   }
 }
