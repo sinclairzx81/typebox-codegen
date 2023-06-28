@@ -46,8 +46,14 @@ export namespace ModelToZod {
     if (IsDefined<number>(schema.maxItems)) buffer.push(`.max(${schema.maxItems})`)
     return buffer.join(``)
   }
+  function BigInt(schema: Types.TBigInt) {
+    return `z.bigint()`
+  }
   function Boolean(schema: Types.TBoolean) {
     return `z.boolean()`
+  }
+  function Date(schema: Types.TDate) {
+    return `z.date()`
   }
   function Constructor(schema: Types.TConstructor): string {
     return UnsupportedType(schema)
@@ -171,7 +177,9 @@ export namespace ModelToZod {
     if (schema.$id !== undefined && emitted_set.has(schema.$id!)) return schema.$id!
     if (Types.TypeGuard.TAny(schema)) return Any(schema)
     if (Types.TypeGuard.TArray(schema)) return Array(schema)
+    if (Types.TypeGuard.TBigInt(schema)) return BigInt(schema)
     if (Types.TypeGuard.TBoolean(schema)) return Boolean(schema)
+    if (Types.TypeGuard.TDate(schema)) return Date(schema)
     if (Types.TypeGuard.TConstructor(schema)) return Constructor(schema)
     if (Types.TypeGuard.TFunction(schema)) return Function(schema)
     if (Types.TypeGuard.TInteger(schema)) return Integer(schema)
@@ -207,9 +215,15 @@ export namespace ModelToZod {
     }
     const type = Collect(schema)
     if (recursive_set.has(schema.$id!)) {
+      output.push(`// -------------------------------------------------------------`)
+      output.push(`// ${schema.$id!}`)
+      output.push(`// -------------------------------------------------------------`)
       output.push(`export type ${schema.$id} = z.infer<typeof ${schema.$id}>`)
       output.push(`export const ${schema.$id || `T`} = z.lazy(() => ${Formatter.Format(type)})`)
     } else {
+      output.push(`// -------------------------------------------------------------`)
+      output.push(`// Type: ${schema.$id!}`)
+      output.push(`// -------------------------------------------------------------`)
       output.push(`export type ${schema.$id} = z.infer<typeof ${schema.$id}>`)
       output.push(`export const ${schema.$id || `T`} = ${Formatter.Format(type)}`)
     }

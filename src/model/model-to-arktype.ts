@@ -106,11 +106,17 @@ export namespace ModelToArkType {
       maximum: schema.maxItems,
     })
   }
+  function BigInt(schema: Types.TBigInt) {
+    return Wrap('bigint')
+  }
   function Boolean(schema: Types.TBoolean) {
     return Wrap('boolean')
   }
   function Constructor(schema: Types.TConstructor): string {
     return `['instanceof', Function]`
+  }
+  function Date(schema: Types.TDate): string {
+    return `['instanceof', Date]`
   }
   function Function(schema: Types.TFunction) {
     return `['instanceof', Function]`
@@ -197,8 +203,10 @@ export namespace ModelToArkType {
     if (schema.$id !== undefined && emitted_types.has(schema.$id!)) return `'${schema.$id!}'`
     if (Types.TypeGuard.TAny(schema)) return Any(schema)
     if (Types.TypeGuard.TArray(schema)) return Array(schema)
+    if (Types.TypeGuard.TBigInt(schema)) return BigInt(schema)
     if (Types.TypeGuard.TBoolean(schema)) return Boolean(schema)
     if (Types.TypeGuard.TConstructor(schema)) return Constructor(schema)
+    if (Types.TypeGuard.TDate(schema)) return Date(schema)
     if (Types.TypeGuard.TFunction(schema)) return Function(schema)
     if (Types.TypeGuard.TInteger(schema)) return Integer(schema)
     if (Types.TypeGuard.TIntersect(schema)) return Intersect(schema)
@@ -243,18 +251,18 @@ export namespace ModelToArkType {
     reference_map.clear()
     emitted_types.clear()
     const buffer: string[] = []
-    buffer.push('// ----------------------------------------------')
+    buffer.push('// -------------------------------------------------------------')
     buffer.push('// Scope')
-    buffer.push('// ----------------------------------------------')
+    buffer.push('// -------------------------------------------------------------')
     buffer.push('export const Scope = scope({')
     for (const type of model.types) {
       buffer.push(`${GenerateType(type, model.types)},`)
     }
     buffer.push('}).compile()')
     buffer.push('\n')
-    buffer.push('// ----------------------------------------------')
+    buffer.push('// -------------------------------------------------------------')
     buffer.push('// Types')
-    buffer.push('// ----------------------------------------------')
+    buffer.push('// -------------------------------------------------------------')
     for (const type of model.types) {
       buffer.push(`export type ${type.$id} = typeof ${type.$id}.infer`)
       buffer.push(`export const ${type.$id} = Scope.${type.$id}`)
