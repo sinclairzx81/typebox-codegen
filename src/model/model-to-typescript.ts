@@ -46,7 +46,7 @@ export namespace ModelToTypeScript {
   function Constructor(schema: Types.TConstructor) {
     const params = schema.parameters.map((param) => Visit(param)).join(', ')
     const returns = Visit(schema.returns)
-    return `new (${params}) => ${returns}`
+    return `(new (${params}) => ${returns})`
   }
   function Date(schema: Types.TDate) {
     return 'Date'
@@ -54,7 +54,7 @@ export namespace ModelToTypeScript {
   function Function(schema: Types.TFunction) {
     const params = schema.parameters.map((param) => Visit(param)).join(', ')
     const returns = Visit(schema.returns)
-    return `(${params}) => ${returns}`
+    return `((${params}) => ${returns})`
   }
   function Integer(schema: Types.TInteger) {
     return 'number'
@@ -180,6 +180,6 @@ export namespace ModelToTypeScript {
       `)
     }
     const output = [...definitions]
-    return output.join('\n\n')
+    return Formatter.Format(output.join('\n\n'))
   }
 }

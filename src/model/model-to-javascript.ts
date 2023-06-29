@@ -34,10 +34,10 @@ export namespace ModelToJavaScript {
     const header = `// @ts-nocheck`
     for (const type of model.types) {
       definitions.push(`export const ${type.$id!} = (() => { 
-        ${TypeCompiler.Code(type, [], { language: 'javascript' })} 
+        ${TypeCompiler.Code(type, model.types, { language: 'javascript' })} 
       })()`)
     }
     const output = [header, ...definitions]
-    return Formatter.Format(output.join('\n\n'))
+    return output.join('\n\n')
   }
 }

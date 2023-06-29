@@ -36,6 +36,6 @@ export namespace ModelToJsonSchema {
       `)
     }
     const output = [...definitions]
-    return Formatter.Format(output.join('\n\n'))
+    return output.join('\n\n')
   }
 }
