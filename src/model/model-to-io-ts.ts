@@ -138,12 +138,17 @@ export namespace ModelToIoTs {
     // prettier-ignore
     const properties = globalThis.Object.entries(schema.properties).map(([key, value]) => {
       const optional = Types.TypeGuard.TOptional(value) || Types.TypeGuard.TReadonlyOptional(value)
+      const readonly = Types.TypeGuard.TReadonly(value) || Types.TypeGuard.TReadonlyOptional(value)
       const property = PropertyEncoder.Encode(key)
-      return optional ? `${property}: ${Visit(value)}.optional()` : `${property}: ${Visit(value)}`
+      const resolved = optional ? `t.union([t.undefined, ${Visit(value)}])` : Visit(value)
+      return readonly ? `${property} : t.readonly(${resolved})` : `${property} : ${resolved}`
     }).join(`,`)
     const buffer: string[] = []
-    buffer.push(`t.type({\n${properties}\n})`)
-    if (schema.additionalProperties === false) buffer.push(`.strict()`)
+    if (schema.additionalProperties === false) {
+      buffer.push(`t.strict({\n${properties}\n})`)
+    } else {
+      buffer.push(`t.type({\n${properties}\n})`)
+    }
     return Type(schema, buffer.join(``))
   }
   function Promise(schema: Types.TPromise) {
