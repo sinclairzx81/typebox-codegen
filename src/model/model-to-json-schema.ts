@@ -89,7 +89,7 @@ export namespace ModelToJsonSchema {
   }
   function Record(schema: Types.TRecord): Types.TSchema {
     const patternProperties = globalThis.Object.keys(schema.patternProperties).reduce((acc, key) => {
-      return { ...acc, [key]: Visit(schema.properties[key]) }
+      return { ...acc, [key]: Visit(schema.patternProperties[key]) }
     }, {})
     return { ...schema, patternProperties }
   }
