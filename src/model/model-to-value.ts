@@ -34,7 +34,7 @@ export namespace ModelToValue {
 
     for (const type of model.types) {
       definitions.push(`
-      export const ${type.$id!} = ${JSON.stringify(Value.Create(type))};
+      export const ${type.$id!} = ${JSON.stringify(Value.Create(type, model.types))};
       `)
     }
     const output = [...definitions]

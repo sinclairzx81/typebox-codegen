@@ -36,7 +36,7 @@ export class TypeScriptToTypeBoxError extends Error {
 // TypeScriptToTypeBox
 // --------------------------------------------------------------------------
 
-export type ReferenceModel = 'inline' | 'ordered' | 'cyclic'
+export type ReferenceModel = 'inline' | 'cyclic'
 
 export interface TypeScriptToTypeBoxOptions {
   /**
@@ -434,8 +434,6 @@ export namespace TypeScriptToTypeBox {
       switch (referenceModel) {
         case 'cyclic':
           return yield `Type.Unsafe({ [Kind]: 'Ref', $ref: '${name}' })`
-        case 'ordered':
-          return yield `Type.Ref(${name})`
         case 'inline':
           return yield `${name}${args}`
       }
