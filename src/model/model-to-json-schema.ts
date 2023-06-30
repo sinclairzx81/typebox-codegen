@@ -155,13 +155,10 @@ export namespace ModelToJsonSchema {
     if (Types.TypeGuard.TVoid(schema)) return Void(schema)
     return UnsupportedType(schema)
   }
-  function GenerateType(model: TypeBoxModel, schema: Types.TSchema, references: Types.TSchema[]) {
-    return Visit(schema)
-  }
   export function Generate(model: TypeBoxModel): string {
     const buffer: string[] = []
     for (const type of model.types) {
-      const schema = GenerateType(model, type, model.types)
+      const schema = Visit(type)
       const encode = JSON.stringify(schema, null, 2)
       buffer.push(`export const ${type.$id} = ${encode}`)
     }
