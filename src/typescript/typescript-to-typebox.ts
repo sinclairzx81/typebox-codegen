@@ -36,7 +36,7 @@ export class TypeScriptToTypeBoxError extends Error {
 // TypeScriptToTypeBox
 // --------------------------------------------------------------------------
 
-export type ReferenceModel = 'inline' | 'cyclic'
+export type ReferenceModel = 'inline' | 'ordered' | 'cyclic'
 
 export interface TypeScriptToTypeBoxOptions {
   /**
@@ -426,6 +426,8 @@ export namespace TypeScriptToTypeBox {
     if (name === 'ReturnType') return yield `Type.ReturnType${args}`
     if (name === 'InstanceType') return yield `Type.InstanceType${args}`
     if (name === 'Parameters') return yield `Type.Parameters${args}`
+    if (name === 'AsyncIterableIterator') return yield `Type.AsyncIterator${args}`
+    if (name === 'IterableIterator') return yield `Type.Iterator${args}`
     if (name === 'ConstructorParameters') return yield `Type.ConstructorParameters${args}`
     if (name === 'Exclude') return yield `Type.Exclude${args}`
     if (name === 'Extract') return yield `Type.Extract${args}`
@@ -434,6 +436,8 @@ export namespace TypeScriptToTypeBox {
       switch (referenceModel) {
         case 'cyclic':
           return yield `Type.Unsafe({ [Kind]: 'Ref', $ref: '${name}' })`
+        case 'ordered':
+          return yield `Type.Ref(${name})`
         case 'inline':
           return yield `${name}${args}`
       }

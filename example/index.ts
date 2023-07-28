@@ -49,6 +49,7 @@ Print('Model To JsonSchema Inline', Codegen.ModelToJsonSchema.Generate(inlineMod
 Print('Model To JavaScript', Codegen.ModelToJavaScript.Generate(inlineModel))
 Print('Model To TypeScript', Codegen.ModelToTypeScript.Generate(inlineModel))
 Print('Model To Value', Codegen.ModelToValue.Generate(inlineModel))
+Print('Model To Yup', Codegen.ModelToYup.Generate(inlineModel))
 Print('Model To Zod', Codegen.ModelToZod.Generate(inlineModel))
 
 const cyclicModel = Codegen.TypeScriptToModel.Generate(Code, 'cyclic')

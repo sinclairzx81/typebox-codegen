@@ -25,7 +25,6 @@ THE SOFTWARE.
 ---------------------------------------------------------------------------*/
 
 import { TypeBoxModel } from './model'
-import { Formatter } from '../common/formatter'
 import { Value } from '@sinclair/typebox/value'
 
 export namespace ModelToValue {
@@ -38,6 +37,6 @@ export namespace ModelToValue {
       `)
     }
     const output = [...definitions]
-    return Formatter.Format(output.join('\n\n'))
+    return output.join('\n\n')
   }
 }

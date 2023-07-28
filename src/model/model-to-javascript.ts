@@ -25,7 +25,6 @@ THE SOFTWARE.
 ---------------------------------------------------------------------------*/
 
 import { TypeBoxModel } from './model'
-import { Formatter } from '../common/formatter'
 import { TypeCompiler } from '@sinclair/typebox/compiler'
 
 export namespace ModelToJavaScript {

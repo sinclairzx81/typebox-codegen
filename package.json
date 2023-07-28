@@ -29,7 +29,7 @@
     "arktype": "^1.0.14-alpha"
   },
   "dependencies": {
-    "@sinclair/typebox": "^0.28.20",
+    "@sinclair/typebox": "^0.30.0-dev-3",
     "prettier": "^2.8.7",
     "typescript": "^5.1.5"
   },

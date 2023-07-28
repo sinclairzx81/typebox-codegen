@@ -148,7 +148,7 @@ export namespace ModelToArkType {
   function Object(schema: Types.TObject) {
     const properties = globalThis.Object.entries(schema.properties)
       .map(([key, schema]) => {
-        const optional = Types.TypeGuard.TOptional(schema) || Types.TypeGuard.TReadonlyOptional(schema)
+        const optional = Types.TypeGuard.TOptional(schema)
         const property1 = PropertyEncoder.Encode(key)
         const property2 = optional ? `'${property1}?'` : `${property1}`
         return `${property2}: ${Visit(schema)}`
