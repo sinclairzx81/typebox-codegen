@@ -72,8 +72,8 @@ export namespace ModelToZod {
     buffer.push(`z.number().int()`)
     if (IsDefined<number>(schema.minimum)) buffer.push(`.min(${schema.minimum})`)
     if (IsDefined<number>(schema.maximum)) buffer.push(`.max(${schema.maximum})`)
+    if (IsDefined<number>(schema.exclusiveMinimum)) buffer.push(`.min(${schema.exclusiveMinimum + 1})`)
     if (IsDefined<number>(schema.exclusiveMaximum)) buffer.push(`.max(${schema.exclusiveMaximum - 1})`)
-    if (IsDefined<number>(schema.exclusiveMinimum)) buffer.push(`.max(${schema.exclusiveMinimum + 1})`)
     if (IsDefined<number>(schema.multipleOf)) buffer.push(`.multipleOf(${schema.multipleOf})`)
     return Type(schema, buffer.join(``))
   }
@@ -107,8 +107,8 @@ export namespace ModelToZod {
     buffer.push(`z.number()`)
     if (IsDefined<number>(schema.minimum)) buffer.push(`.min(${schema.minimum})`)
     if (IsDefined<number>(schema.maximum)) buffer.push(`.max(${schema.maximum})`)
+    if (IsDefined<number>(schema.exclusiveMinimum)) buffer.push(`.min(${schema.exclusiveMinimum + 1})`)
     if (IsDefined<number>(schema.exclusiveMaximum)) buffer.push(`.max(${schema.exclusiveMaximum - 1})`)
-    if (IsDefined<number>(schema.exclusiveMinimum)) buffer.push(`.max(${schema.exclusiveMinimum + 1})`)
     if (IsDefined<number>(schema.multipleOf)) buffer.push(`.multipleOf(${schema.multipleOf})`)
     return Type(schema, buffer.join(``))
   }
