@@ -431,6 +431,11 @@ export namespace TypeScriptToTypeBox {
     if (name === 'ConstructorParameters') return yield `Type.ConstructorParameters${args}`
     if (name === 'Exclude') return yield `Type.Exclude${args}`
     if (name === 'Extract') return yield `Type.Extract${args}`
+    if (name === 'Awaited') return yield `Type.Awaited${args}`
+    if (name === 'Uppercase') return yield `Type.Uppercase${args}`
+    if (name === 'Lowercase') return yield `Type.Lowercase${args}`
+    if (name === 'Capitalize') return yield `Type.Capitalize${args}`
+    if (name === 'Uncapitalize') return yield `Type.Uncapitalize${args}`
     if (recursiveDeclaration !== null && FindRecursiveParent(recursiveDeclaration, node)) return yield `This`
     if (FindTypeName(node.getSourceFile(), name) && args.length === 0 /** non-resolvable */) {
       switch (referenceModel) {
