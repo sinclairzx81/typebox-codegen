@@ -36,16 +36,7 @@ export class TypeScriptToTypeBoxError extends Error {
 // TypeScriptToTypeBox
 // --------------------------------------------------------------------------
 
-export type ReferenceModel = 'inline' | 'ordered' | 'cyclic'
-
 export interface TypeScriptToTypeBoxOptions {
-  /**
-   * Specifies the output reference model used to reference types. The `inline` model uses
-   * inline ordered JavaScript references. The `ordered` model uses `Type.Ref()` and requires
-   * type ordering. The `cyclic` model generates synthetic references via `Type.Unsafe()` at
-   * a cost of losing static type information. The default is `inline`
-   */
-  referenceModel?: ReferenceModel
   /**
    * Setting this to true will ensure all types are exports as const values. This setting is
    * used by the TypeScriptToTypeBoxModel to gather TypeBox definitions during runtime eval
@@ -99,8 +90,6 @@ export namespace TypeScriptToTypeBox {
   let useExportsEverything = false
   // (option) inject identifiers
   let useIdentifiers = false
-  // (option) specifies the referencing model.
-  let referenceModel = 'inline' as ReferenceModel
   // (option) specifies if typebox imports should be included
   let useTypeBoxImport = true
   // ------------------------------------------------------------------------------------------------------------
@@ -447,14 +436,7 @@ export namespace TypeScriptToTypeBox {
     if (name === 'Uncapitalize') return yield `Type.Uncapitalize${args}`
     if (recursiveDeclaration !== null && FindRecursiveParent(recursiveDeclaration, node)) return yield `This`
     if (FindTypeName(node.getSourceFile(), name) && args.length === 0 /** non-resolvable */) {
-      switch (referenceModel) {
-        case 'cyclic':
-          return yield `Type.Unsafe({ [Kind]: 'Ref', $ref: '${name}' })`
-        case 'ordered':
-          return yield `Type.Ref(${name})`
-        case 'inline':
-          return yield `${name}${args}`
-      }
+      return yield `${name}${args}`
     }
     if (name in globalThis) return yield `Type.Never()`
     return yield `${name}${args}`
@@ -550,9 +532,6 @@ export namespace TypeScriptToTypeBox {
   function ImportStatement(): string {
     if (!(useImports && useTypeBoxImport)) return ''
     const set = new Set<string>(['Type', 'Static'])
-    if (referenceModel === 'cyclic') {
-      set.add('Kind')
-    }
     if (useGenerics) {
       set.add('TSchema')
     }
@@ -563,31 +542,32 @@ export namespace TypeScriptToTypeBox {
       set.add('TypeClone')
     }
     if (useMapped) {
+      set.add('TemplateLiteralFinite')
+      set.add('TemplateLiteralParser')
+      set.add('TemplateLiteralGenerator')
+      set.add('TTemplateLiteral')
       set.add('TypeGuard')
       set.add('TSchema')
       set.add('TRecord')
       set.add('TUnion')
       set.add('TLiteral')
     }
-
     const imports = [...set].join(', ')
     return `import { ${imports} } from '@sinclair/typebox'`
   }
-
-  // type MappedFunction<K, S extends TSchema = TSchema> = (key: K) => S
-  // type MappedParameter = TUnion<TLiteral<string>[]> | TLiteral<string>
-  // function Mapped<K extends MappedParameter, F extends MappedFunction<K>>(
   function MappedSupport() {
     return useMapped
       ? [
-          '// ---------------------------------------------------------------------------------------',
-          '// Type.Mapped<C, F>: TypeScript Inference Not Supported',
-          '// ---------------------------------------------------------------------------------------',
-          'type MappedConstraint = TUnion<TLiteral<string>[]> | TLiteral<string>',
+          'type MappedConstraint = TTemplateLiteral | TUnion<TLiteral<string>[]> | TLiteral<string>',
           'type MappedFunction<C extends MappedConstraint, S extends TSchema = TSchema> = (C: C) => S',
           'function Mapped<C extends MappedConstraint, F extends MappedFunction<C>>(C: C, F: F): TRecord<C, ReturnType<F>> {',
-          '  return (TypeGuard.TUnion(C)',
-          '    ? Type.Object(C.anyOf.reduce((A, K) => ({ ...A, [K.const]: F(K as any)}), {}))',
+          '  return (',
+          '    TypeGuard.TTemplateLiteral(C) ? (() => {',
+          '      const E = TemplateLiteralParser.ParseExact(C.pattern)',
+          '      const K = TemplateLiteralFinite.Check(E) ? [...TemplateLiteralGenerator.Generate(E)] : []',
+          '      return Type.Object(K.reduce((A, K) => ({ ...A, [K]: F(Type.Literal(K) as any)}), {}))',
+          '    })() :',
+          '    TypeGuard.TUnion(C) ? Type.Object(C.anyOf.reduce((A, K) => ({ ...A, [K.const]: F(K as any)}), {}))',
           '    : Type.Object({ [C.const]: F(C) })) as any',
           '}',
         ].join('\n')
@@ -597,7 +577,6 @@ export namespace TypeScriptToTypeBox {
   export function Generate(typescriptCode: string, options?: TypeScriptToTypeBoxOptions) {
     useExportsEverything = options?.useExportEverything ?? false
     useIdentifiers = options?.useIdentifiers ?? false
-    referenceModel = options?.referenceModel ?? 'inline'
     useTypeBoxImport = options?.useTypeBoxImport ?? true
     typenames.clear()
     useMapped = false

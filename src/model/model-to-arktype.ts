@@ -146,8 +146,10 @@ export namespace ModelToArkType {
     return ConstrainedNumericType('number', schema)
   }
   function Object(schema: Types.TObject) {
+    console.log(1, schema)
     const properties = globalThis.Object.entries(schema.properties)
       .map(([key, schema]) => {
+        console.log(1, key)
         const optional = Types.TypeGuard.TOptional(schema)
         const property1 = PropertyEncoder.Encode(key)
         const property2 = optional ? `'${property1}?'` : `${property1}`

@@ -24,8 +24,8 @@ THE SOFTWARE.
 
 ---------------------------------------------------------------------------*/
 
-import { TypeScriptToTypeBox, ReferenceModel } from './typescript-to-typebox'
-import { Type, Kind, TypeClone, TypeGuard, TSchema } from '@sinclair/typebox'
+import { TypeScriptToTypeBox } from './typescript-to-typebox'
+import { Type, Kind, TSchema, TypeClone, TypeGuard, TemplateLiteralParser, TemplateLiteralFinite, TemplateLiteralGenerator } from '@sinclair/typebox'
 import { TypeBoxModel } from '../model/model'
 import * as ts from 'typescript'
 
@@ -36,8 +36,8 @@ export namespace TypeScriptToModel {
   }
   export function Exports(code: string): Map<string, TSchema | Function> {
     const exports = {}
-    const evaluate = new Function('exports', 'Type', 'TypeGuard', 'TypeClone', 'Kind', code)
-    evaluate(exports, Type, TypeGuard, TypeClone, Kind)
+    const evaluate = new Function('exports', 'Type', 'Kind', 'TypeGuard', 'TypeClone', 'TemplateLiteralParser', 'TemplateLiteralFinite', 'TemplateLiteralGenerator', code)
+    evaluate(exports, Type, Kind, TypeGuard, TypeClone, TemplateLiteralParser, TemplateLiteralFinite, TemplateLiteralGenerator)
     return new Map(globalThis.Object.entries(exports))
   }
   export function Types(exports: Map<string, TSchema | Function>): TSchema[] {
@@ -48,9 +48,8 @@ export namespace TypeScriptToModel {
     }
     return types
   }
-  export function Generate(typescriptCode: string, referenceModel: ReferenceModel = 'inline'): TypeBoxModel {
+  export function Generate(typescriptCode: string): TypeBoxModel {
     const typescript = TypeScriptToTypeBox.Generate(typescriptCode, {
-      referenceModel: referenceModel,
       useExportEverything: true,
       useTypeBoxImport: false,
       useIdentifiers: true,
