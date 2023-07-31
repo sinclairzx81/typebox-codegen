@@ -25,7 +25,6 @@
   "homepage": "https://github.com/sinclairzx81/typebox-codegen#readme",
   "devDependencies": {
     "@sinclair/hammer": "^0.17.2",
-    
     "@types/node": "^18.15.11",
     "@types/prettier": "^2.7.2"
   },
