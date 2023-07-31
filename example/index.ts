@@ -14,20 +14,24 @@ function Print(transform: string, code: any) {
 }
 
 const Code = `
-export interface Vector {
-  /** 
-   * @default 1 
-   */
-  x: number
-  /** 
-   * @default 2 
-   */
-  y: number
+export type A = {
+  x: number,
+  y: string,
+  z: boolean
 }
+export type B = {
+  a: number,
+  b: string,
+  c: boolean
+}
+export type T = A & B
 
-export interface Node {
-  id: string
-  nodes: this[]
+export type M = { 
+  [K in keyof T]: 
+    T[K] extends string ? 'a string' : 
+    T[K] extends number ? 'a number' :
+    T[K] extends boolean ? 'a boolean' :
+    never
 }
 `
 // ----------------------------------------------------------------------------

@@ -91,6 +91,8 @@ export namespace TypeScriptToTypeBox {
   let useOptions = false
   // (auto) tracked for injecting TSchema import statements
   let useGenerics = false
+  // (auto) tracked for mapped types
+  let useMapped = false
   // (auto) tracked for cases where composition requires deep clone
   let useTypeClone = false
   // (option) export override to ensure all schematics
@@ -229,6 +231,13 @@ export namespace TypeScriptToTypeBox {
   function* UnionTypeNode(node: ts.UnionTypeNode): IterableIterator<string> {
     const types = node.types.map((type) => Collect(type)).join(',\n')
     yield `Type.Union([\n${types}\n])`
+  }
+  function* MappedTypeNode(node: ts.MappedTypeNode): IterableIterator<string> {
+    useMapped = true
+    const K = Collect(node.typeParameter)
+    const T = Collect(node.type)
+    const C = Collect(node.typeParameter.constraint)
+    yield `Mapped(${C}, ${K} => ${T})`
   }
   function* MethodSignature(node: ts.MethodSignature): IterableIterator<string> {
     const parameters = node.parameters.map((parameter) => (parameter.dotDotDotToken !== undefined ? `...Type.Rest(${Collect(parameter)})` : Collect(parameter))).join(', ')
@@ -497,6 +506,7 @@ export namespace TypeScriptToTypeBox {
     if (ts.isIdentifier(node)) return yield node.getText()
     if (ts.isIntersectionTypeNode(node)) return yield* IntersectionTypeNode(node)
     if (ts.isUnionTypeNode(node)) return yield* UnionTypeNode(node)
+    if (ts.isMappedTypeNode(node)) return yield* MappedTypeNode(node)
     if (ts.isMethodSignature(node)) return yield* MethodSignature(node)
     if (ts.isModuleBlock(node)) return yield* ModuleBlock(node)
     if (ts.isParameter(node)) return yield* Parameter(node)
@@ -537,14 +547,51 @@ export namespace TypeScriptToTypeBox {
     }
     console.warn('Unhandled:', ts.SyntaxKind[node.kind], node.getText())
   }
-  export function ImportStatement(): string {
+  function ImportStatement(): string {
     if (!(useImports && useTypeBoxImport)) return ''
-    const imported = ['Type', 'Static']
-    if (referenceModel === 'cyclic') imported.push('Kind')
-    if (useGenerics) imported.push('TSchema')
-    if (useOptions) imported.push('SchemaOptions')
-    if (useTypeClone) imported.push('TypeClone')
-    return `import { ${imported.join(', ')} } from '@sinclair/typebox'`
+    const set = new Set<string>(['Type', 'Static'])
+    if (referenceModel === 'cyclic') {
+      set.add('Kind')
+    }
+    if (useGenerics) {
+      set.add('TSchema')
+    }
+    if (useOptions) {
+      set.add('SchemaOptions')
+    }
+    if (useTypeClone) {
+      set.add('TypeClone')
+    }
+    if (useMapped) {
+      set.add('TypeGuard')
+      set.add('TSchema')
+      set.add('TRecord')
+      set.add('TUnion')
+      set.add('TLiteral')
+    }
+
+    const imports = [...set].join(', ')
+    return `import { ${imports} } from '@sinclair/typebox'`
+  }
+
+  // type MappedFunction<K, S extends TSchema = TSchema> = (key: K) => S
+  // type MappedParameter = TUnion<TLiteral<string>[]> | TLiteral<string>
+  // function Mapped<K extends MappedParameter, F extends MappedFunction<K>>(
+  function MappedSupport() {
+    return useMapped
+      ? [
+          '// ---------------------------------------------------------------------------------------',
+          '// Type.Mapped<C, F>: TypeScript Inference Not Supported',
+          '// ---------------------------------------------------------------------------------------',
+          'type MappedConstraint = TUnion<TLiteral<string>[]> | TLiteral<string>',
+          'type MappedFunction<C extends MappedConstraint, S extends TSchema = TSchema> = (C: C) => S',
+          'function Mapped<C extends MappedConstraint, F extends MappedFunction<C>>(C: C, F: F): TRecord<C, ReturnType<F>> {',
+          '  return (TypeGuard.TUnion(C)',
+          '    ? Type.Object(C.anyOf.reduce((A, K) => ({ ...A, [K.const]: F(K as any)}), {}))',
+          '    : Type.Object({ [C.const]: F(C) })) as any',
+          '}',
+        ].join('\n')
+      : ''
   }
   /** Generates TypeBox types from TypeScript interface and type definitions */
   export function Generate(typescriptCode: string, options?: TypeScriptToTypeBoxOptions) {
@@ -553,6 +600,7 @@ export namespace TypeScriptToTypeBox {
     referenceModel = options?.referenceModel ?? 'inline'
     useTypeBoxImport = options?.useTypeBoxImport ?? true
     typenames.clear()
+    useMapped = false
     useImports = false
     useOptions = false
     useGenerics = false
@@ -561,7 +609,8 @@ export namespace TypeScriptToTypeBox {
     const source = ts.createSourceFile('types.ts', typescriptCode, ts.ScriptTarget.ESNext, true)
     const declarations = [...Visit(source)].join('\n\n')
     const imports = ImportStatement()
-    const typescript = [imports, '', declarations].join('\n')
+    const mapped = MappedSupport()
+    const typescript = [imports, '', mapped, '', declarations].join('\n')
     const assertion = ts.transpileModule(typescript, transpilerOptions)
     if (assertion.diagnostics && assertion.diagnostics.length > 0) {
       throw new TypeScriptToTypeBoxError(assertion.diagnostics)

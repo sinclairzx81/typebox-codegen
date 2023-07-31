@@ -25,7 +25,7 @@ THE SOFTWARE.
 ---------------------------------------------------------------------------*/
 
 import { TypeScriptToTypeBox, ReferenceModel } from './typescript-to-typebox'
-import { Type, Kind, TypeClone, TSchema } from '@sinclair/typebox'
+import { Type, Kind, TypeClone, TypeGuard, TSchema } from '@sinclair/typebox'
 import { TypeBoxModel } from '../model/model'
 import * as ts from 'typescript'
 
@@ -36,8 +36,8 @@ export namespace TypeScriptToModel {
   }
   export function Exports(code: string): Map<string, TSchema | Function> {
     const exports = {}
-    const evaluate = new Function('exports', 'Type', 'TypeClone', 'Kind', code)
-    evaluate(exports, Type, TypeClone, Kind)
+    const evaluate = new Function('exports', 'Type', 'TypeGuard', 'TypeClone', 'Kind', code)
+    evaluate(exports, Type, TypeGuard, TypeClone, Kind)
     return new Map(globalThis.Object.entries(exports))
   }
   export function Types(exports: Map<string, TSchema | Function>): TSchema[] {
