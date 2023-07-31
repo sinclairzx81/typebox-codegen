@@ -1,6 +1,6 @@
 /*--------------------------------------------------------------------------
 
-@typebox/codegen
+@sinclair/typebox-codegen
 
 The MIT License (MIT)
 

@@ -19,12 +19,6 @@ export async function test(testReporter = 'spec', filter = '') {
   await shell(`node --test-reporter ${testReporter} --test ${pattern} target/test/index.js`)
 }
 // -------------------------------------------------------------------------------
-// Serve
-// -------------------------------------------------------------------------------
-export async function serve() {
-  await shell('hammer serve example/index.html --dist target/example')
-}
-// -------------------------------------------------------------------------------
 // Start
 // -------------------------------------------------------------------------------
 export async function start() {
@@ -33,6 +27,10 @@ export async function start() {
 // -------------------------------------------------------------------------------
 // Build
 // -------------------------------------------------------------------------------
-export async function build() {
-  await shell('tsc -p src/tsconfig.json --outDir target/build --declaration')
+export async function build(target = 'target/build') {
+  await shell(`tsc -p src/tsconfig.json --outDir ${target} --declaration`)
+  await folder(target).add('package.json')
+  await folder(target).add('license')
+  await folder(target).add('readme.md')
+  await shell(`cd ${target} && npm pack`)
 }

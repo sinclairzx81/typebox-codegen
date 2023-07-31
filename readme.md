@@ -12,9 +12,9 @@
 
 ## Overview
 
-This library implements various code generation tools for transforming TypeScript types into TypeBox types as well as several other type representations. This library works by first transforming TypeScript type representations into a TypeBox Type Model. The Model can then be passed to various code generators that map the TypeBox Model into various target representations.
+TypeBox-Codegen is a code generation tool that converts TypeScript types into TypeBox types as well as several other schema and library representations. It works by extracting structural type information from the TypeScript compiler and maps into a TypeBox specific model. This model can then be passed on to various code generators to generate a multitude of various type representations by introspecting TypeBox's schematics.
 
-The library contains various code generators for libraries such as Zod, Io-Ts, ArkType and Valibot, no-library function generators for JavaScript and TypeScript as well as TypeScript to JSON Schema generation derived from TypeBox schematics. These tools are written as a backend for CLI tooling, website integration and as a system to assert TypeBox alignment with the TypeScript type system.
+The library contains various code transformations for libraries such as Zod, Io-Ts, ArkType and Valibot, function generators for JavaScript and TypeScript (derived from the TypeCompiler) as well as JSON Schema generation derived from TypeBox's raw schematics. This project is written as a backend for command line tooling, website integration and as a tool to assert TypeBox alignment with the TypeScript type system.
 
 License MIT
 

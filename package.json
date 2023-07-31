@@ -1,20 +1,19 @@
 {
-  "name": "typebox-codegen",
-  "version": "0.0.1",
-  "description": "Code Generation for TypeBox Types",
-  "main": "index.js",
-  "keywords": [
-    "typebox",
-    "codegen"
-  ],
   "scripts": {
     "build": "hammer task build",
     "clean": "hammer task clean",
     "format": "hammer task format",
     "start": "hammer task start",
-    "serve": "hammer task serve",
     "test": "hammer task test"
   },
+  "name": "typebox-codegen",
+  "version": "0.8.0",
+  "description": "Code Generation Tools for TypeBox",
+  "main": "index.js",
+  "keywords": [
+    "typebox",
+    "codegen"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sinclairzx81/typebox-codegen.git"
@@ -24,12 +23,12 @@
   "homepage": "https://github.com/sinclairzx81/typebox-codegen#readme",
   "devDependencies": {
     "@sinclair/hammer": "^0.17.2",
+    
     "@types/node": "^18.15.11",
-    "@types/prettier": "^2.7.2",
-    "arktype": "^1.0.14-alpha"
+    "@types/prettier": "^2.7.2"
   },
   "dependencies": {
-    "@sinclair/typebox": "^0.30.0-dev-3",
+    "@sinclair/typebox": "^0.30.0-dev-7",
     "prettier": "^2.8.7",
     "typescript": "^5.1.6"
   },
