@@ -546,9 +546,11 @@ export namespace TypeScriptToTypeBox {
       set.add('TemplateLiteralParser')
       set.add('TemplateLiteralGenerator')
       set.add('TTemplateLiteral')
+      set.add('TPropertyKey')
       set.add('TypeGuard')
       set.add('TSchema')
-      set.add('TRecord')
+      set.add('TString')
+      set.add('TNumber')
       set.add('TUnion')
       set.add('TLiteral')
     }
@@ -558,17 +560,22 @@ export namespace TypeScriptToTypeBox {
   function MappedSupport() {
     return useMapped
       ? [
-          'type MappedConstraint = TTemplateLiteral | TUnion<TLiteral<string>[]> | TLiteral<string>',
+          'type MappedContraintKey = TNumber | TString | TLiteral<TPropertyKey>',
+          'type MappedConstraint = TTemplateLiteral | TUnion<MappedContraintKey[]> | MappedContraintKey',
           'type MappedFunction<C extends MappedConstraint, S extends TSchema = TSchema> = (C: C) => S',
-          'function Mapped<C extends MappedConstraint, F extends MappedFunction<C>>(C: C, F: F): TRecord<C, ReturnType<F>> {',
+          '// prettier-ignore',
+          'function Mapped<C extends MappedConstraint, F extends MappedFunction<C>>(C: C, F: F) {',
           '  return (',
           '    TypeGuard.TTemplateLiteral(C) ? (() => {',
           '      const E = TemplateLiteralParser.ParseExact(C.pattern)',
           '      const K = TemplateLiteralFinite.Check(E) ? [...TemplateLiteralGenerator.Generate(E)] : []',
           '      return Type.Object(K.reduce((A, K) => ({ ...A, [K]: F(Type.Literal(K) as any)}), {}))',
           '    })() :',
-          '    TypeGuard.TUnion(C) ? Type.Object(C.anyOf.reduce((A, K) => ({ ...A, [K.const]: F(K as any)}), {}))',
-          '    : Type.Object({ [C.const]: F(C) })) as any',
+          '    TypeGuard.TUnion(C) ? Type.Object(C.anyOf.reduce((A, K) => ({ ...A, [K.const]: F(K as any)}), {})) : ',
+          '    TypeGuard.TString(C) ? Type.Record(C, F(C)) : ',
+          '    TypeGuard.TNumber(C) ? Type.Record(C, F(C)) : ',
+          '    Type.Object({ [C.const]: F(C) })',
+          '  )',
           '}',
         ].join('\n')
       : ''
