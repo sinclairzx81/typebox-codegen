@@ -46,9 +46,9 @@ console.log(Code)
 
 ## Overview
 
-TypeBox-Codegen is a code generation tool that converts TypeScript types into TypeBox types as well as several other schema and library representations. It works by extracting structural type information from the TypeScript compiler and remaps it into a TypeBox type representation (referred to as a Model). This Model can then be passed on to various code generators to generate a multitude of type representations by introspecting TypeBox's schematics.
+TypeBox-Codegen is a code generation tool that converts TypeScript types into TypeBox types as well as several other schema and library representations. It works by extracting structural type information from the TypeScript compiler then remaps it into a TypeBox representation (referred to as a Model). This Model can then be passed on to various code generators which generate through TypeBox schema introspection.
 
-The library contains various code transformations for libraries such as [zod](https://github.com/colinhacks/zod), [io-ts](https://github.com/gcanti/io-ts), [arktype](https://github.com/arktypeio/arktype) and [valibot](https://github.com/fabian-hiller/valibot), assert function generators for JavaScript and TypeScript (derived from TypeBox's TypeCompiler) as well as JSON Schema generation derived from TypeBox's raw schematics.
+The library contains code transformations for libraries such as [zod](https://github.com/colinhacks/zod), [io-ts](https://github.com/gcanti/io-ts), [arktype](https://github.com/arktypeio/arktype) and [valibot](https://github.com/fabian-hiller/valibot), assert function generators for JavaScript and TypeScript (derived from TypeBox's TypeCompiler) as well as JSON Schema derived from TypeBox's raw schematics.
 
 [Interactive Demo Here](https://sinclairzx81.github.io/typebox-transform/)
 
@@ -82,7 +82,7 @@ console.log('TypeScript To TypeBox', Codegen.TypeScriptToTypeBox.Generate(Code))
 //
 // TypeScriptToModel
 //
-// Generates an in-memory TypeBox Type Model
+// Generates an in-memory TypeBox Model
 //
 // ----------------------------------------------------------------------------
 
@@ -92,7 +92,7 @@ const model = Codegen.TypeScriptToModel.Generate(Code)
 //
 // ModelToX
 //
-// The TypeBox Type Model can be passed to several generators which map the
+// The TypeBox Model can be passed to several generators which map the
 // Model into varying type representations.
 //
 // ----------------------------------------------------------------------------
