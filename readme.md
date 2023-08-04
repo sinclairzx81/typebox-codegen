@@ -50,7 +50,7 @@ TypeBox-Codegen is a code generation tool that converts TypeScript types into Ty
 
 The library contains code transformations for libraries such as [zod](https://github.com/colinhacks/zod), [io-ts](https://github.com/gcanti/io-ts), [arktype](https://github.com/arktypeio/arktype) and [valibot](https://github.com/fabian-hiller/valibot), assert function generators for JavaScript and TypeScript (derived from TypeBox's TypeCompiler) as well as JSON Schema derived from TypeBox's raw schematics.
 
-[TypeBox Workbench Demo Here](https://sinclairzx81.github.io/typebox-workbench/)
+[TypeBox Workbench Example](https://sinclairzx81.github.io/typebox-workbench/)
 
 License MIT
 
