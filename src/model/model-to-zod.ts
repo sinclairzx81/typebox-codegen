@@ -116,8 +116,15 @@ export namespace ModelToZod {
     // prettier-ignore
     const properties = globalThis.Object.entries(schema.properties).map(([key, value]) => {
       const optional = Types.TypeGuard.TOptional(value)
+      const readonly = Types.TypeGuard.TReadonly(value)
       const property = PropertyEncoder.Encode(key)
-      return optional ? `${property}: ${Visit(value)}.optional()` : `${property}: ${Visit(value)}`
+      // prettier-ignore
+      return (
+        readonly && optional ? `${property}: ${Visit(value)}.readonly().optional()` : 
+        readonly ? `${property}: ${Visit(value)}.readonly()` :
+        optional ? `${property}: ${Visit(value)}.optional()` :
+        `${property}: ${Visit(value)}`
+      )
     }).join(`,`)
     const buffer: string[] = []
     buffer.push(`z.object({\n${properties}\n})`)

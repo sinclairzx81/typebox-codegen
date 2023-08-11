@@ -77,7 +77,7 @@ export namespace ModelToValibot {
     return UnsupportedType(schema)
   }
   function Integer(schema: Types.TInteger) {
-    return UnsupportedType(schema)
+    return Type(`v.number`, null, [`v.integer()`])
   }
   function Intersect(schema: Types.TIntersect) {
     const inner = schema.allOf.map((inner) => Visit(inner))
@@ -93,7 +93,7 @@ export namespace ModelToValibot {
     return Type(`v.never`, null, [])
   }
   function Null(schema: Types.TNull) {
-    return UnsupportedType(schema)
+    return Type(`v.nullType`, null, [])
   }
   function String(schema: Types.TString) {
     const constraints: string[] = []
@@ -153,7 +153,7 @@ export namespace ModelToValibot {
     return UnsupportedType(schema)
   }
   function Undefined(schema: Types.TUndefined) {
-    return UnsupportedType(schema)
+    return Type(`v.undefinedType`, null, [])
   }
   function Union(schema: Types.TUnion) {
     const inner = schema.anyOf.map((schema) => Visit(schema)).join(`, `)
@@ -163,7 +163,7 @@ export namespace ModelToValibot {
     return Type(`v.unknown`, null, [])
   }
   function Void(schema: Types.TVoid) {
-    return UnsupportedType(schema)
+    return Type(`v.voidType`, null, [])
   }
   function UnsupportedType(schema: Types.TSchema) {
     return `v.any(/* unsupported */)`
@@ -226,7 +226,7 @@ export namespace ModelToValibot {
     reference_map.clear()
     recursive_set.clear()
     emitted_set.clear()
-    const buffer: string[] = [`import v from 'valibot'`, '']
+    const buffer: string[] = [`import * as v from 'valibot'`, '']
     for (const type of model.types) {
       buffer.push(GenerateType(model, type, model.types))
     }
