@@ -217,7 +217,7 @@ export namespace ModelToYup {
     recursive_set.clear()
     emitted_set.clear()
     const buffer: string[] = [`import y from 'yup'`, '']
-    for (const type of model.types) {
+    for (const type of model.types.filter((type) => Types.TypeGuard.TSchema(type))) {
       buffer.push(GenerateType(model, type, model.types))
     }
     return Formatter.Format(buffer.join('\n'))

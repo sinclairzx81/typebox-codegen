@@ -157,7 +157,7 @@ export namespace ModelToJsonSchema {
   }
   export function Generate(model: TypeBoxModel): string {
     const buffer: string[] = []
-    for (const type of model.types) {
+    for (const type of model.types.filter((type) => Types.TypeGuard.TSchema(type))) {
       const schema = Visit(type)
       const encode = JSON.stringify(schema, null, 2)
       buffer.push(`export const ${type.$id} = ${encode}`)

@@ -146,10 +146,8 @@ export namespace ModelToArkType {
     return ConstrainedNumericType('number', schema)
   }
   function Object(schema: Types.TObject) {
-    console.log(1, schema)
     const properties = globalThis.Object.entries(schema.properties)
       .map(([key, schema]) => {
-        console.log(1, key)
         const optional = Types.TypeGuard.TOptional(schema)
         const property1 = PropertyEncoder.Encode(key)
         const property2 = optional ? `'${property1}?'` : `${property1}`
@@ -251,12 +249,12 @@ export namespace ModelToArkType {
     emitted_types.clear()
     const buffer: string[] = []
     buffer.push('export const types = scope({')
-    for (const type of model.types) {
+    for (const type of model.types.filter((type) => Types.TypeGuard.TSchema(type))) {
       buffer.push(`${GenerateType(type, model.types)},`)
     }
     buffer.push('}).compile()')
     buffer.push('\n')
-    for (const type of model.types) {
+    for (const type of model.types.filter((type) => Types.TypeGuard.TSchema(type))) {
       buffer.push(`export type ${type.$id} = typeof ${type.$id}.infer`)
       buffer.push(`export const ${type.$id} = types.${type.$id}`)
     }

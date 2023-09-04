@@ -285,9 +285,10 @@ export namespace TypeScriptToTypeBox {
     useImports = true
     const exports = IsExport(node) ? 'export ' : ''
     const members = node.members.map((member) => member.getText()).join(', ')
-    const enumType = `${exports}enum ${node.name.getText()}Enum { ${members} }`
-    const type = `${exports}const ${node.name.getText()} = Type.Enum(${node.name.getText()}Enum)`
-    yield [enumType, '', type].join('\n')
+    const enumType = `${exports}enum Enum${node.name.getText()} { ${members} }`
+    const staticType = `${exports}type ${node.name.getText()} = Static<typeof ${node.name.getText()}>`
+    const type = `${exports}const ${node.name.getText()} = Type.Enum(Enum${node.name.getText()})`
+    yield [enumType, '', staticType, type].join('\n')
   }
   function PropertiesFromTypeElementArray(members: ts.NodeArray<ts.TypeElement>): string {
     const properties = members.filter((member) => !ts.isIndexSignatureDeclaration(member))

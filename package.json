@@ -1,6 +1,6 @@
 {
   "name": "@sinclair/typebox-codegen",
-  "version": "0.8.8",
+  "version": "0.8.9",
   "description": "Code Generation Tools for TypeBox",
   "main": "index.js",
   "keywords": [

@@ -60,7 +60,7 @@ export namespace ModelToIoTs {
   function Date(schema: Types.TDate) {
     support_types.set(
       'Date',
-      `const t_Date = new t.Type<Date, Date, unknown>(
+      ` const t_Date = new t.Type<Date, Date, unknown>(
       'Date',
       (value: unknown): value is Date => value instanceof Date,
       (value, context) => (value instanceof Date ? t.success(value) : t.failure(value, context)),
@@ -278,7 +278,7 @@ export namespace ModelToIoTs {
     recursive_set.clear()
     emitted_set.clear()
     const buffer: string[] = [`import t from 'io-ts'`, '']
-    const types = model.types.map((type) => GenerateType(model, type, model.types))
+    const types = model.types.filter((type) => Types.TypeGuard.TSchema(type)).map((type) => GenerateType(model, type, model.types))
     buffer.push(...support_types.values())
     buffer.push('\n')
     buffer.push(...types)

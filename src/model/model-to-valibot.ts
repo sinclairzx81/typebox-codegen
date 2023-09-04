@@ -227,7 +227,7 @@ export namespace ModelToValibot {
     recursive_set.clear()
     emitted_set.clear()
     const buffer: string[] = [`import * as v from 'valibot'`, '']
-    for (const type of model.types) {
+    for (const type of model.types.filter((type) => Types.TypeGuard.TSchema(type))) {
       buffer.push(GenerateType(model, type, model.types))
     }
     return Formatter.Format(buffer.join('\n'))
