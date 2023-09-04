@@ -45,13 +45,17 @@ export namespace ModelToArkType {
   // ------------------------------------------------------------------------
   // Composite
   // ------------------------------------------------------------------------
-  function RequiresType(types: string[]) {
-    return types.some((type) => type.indexOf("'") !== 0)
+  function IsTuple(types: string[]) {
+    return types.some((type) => type.indexOf('[') === 0)
   }
-  function Composite(types: string[], operator: string) {
-    if (RequiresType(types)) {
-      const mapped = types.join(`, '${operator}', `)
-      return `[${mapped}]`
+  function ConstructUnionOrIntersect(types: string[], operator: string) {
+    function Reduce(types: string[]): string {
+      if (types.length === 0) return ''
+      const [left, ...right] = types
+      return right.length > 0 ? `[${left}, '${operator}', ${Reduce(right)}]` : `${left}`
+    }
+    if (IsTuple(types)) {
+      return Reduce(types)
     } else {
       const mapped = types.map((type) => Unwrap(type)).join(` ${operator} `)
       return Wrap(mapped)
@@ -90,7 +94,6 @@ export namespace ModelToArkType {
       return Wrap(`${type}`)
     }
   }
-
   function IsDefined<T = any>(value: unknown): value is T {
     return value !== undefined
   }
@@ -125,7 +128,7 @@ export namespace ModelToArkType {
   }
   function Intersect(schema: Types.TIntersect) {
     const types = schema.allOf.map((schema) => Collect(schema))
-    return Composite(types, '&')
+    return ConstructUnionOrIntersect(types, '&')
   }
   function Literal(schema: Types.TLiteral) {
     return typeof schema.const === 'string' ? Wrap(`"${schema.const}"`) : Wrap(schema.const.toString())
@@ -186,7 +189,7 @@ export namespace ModelToArkType {
   }
   function Union(schema: Types.TUnion) {
     const types = schema.anyOf.map((schema) => Collect(schema))
-    return Composite(types, '|')
+    return ConstructUnionOrIntersect(types, '|')
   }
   function Unknown(schema: Types.TUnknown) {
     return Wrap('unknown')
