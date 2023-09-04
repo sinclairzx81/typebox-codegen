@@ -204,12 +204,13 @@ describe('ts2typebox - Typescript to Typebox', () => {
     const expectedResult = `
     import { Type, Static } from "@sinclair/typebox";
 
-    enum AEnum {
+    enum EnumA {
       A,
       B,
     }
-
-    const A = Type.Enum(AEnum);
+    
+    type A = Static<typeof A>
+    const A = Type.Enum(EnumA);
 
     type T = Static<typeof T>;
     const T = A;
