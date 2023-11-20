@@ -26,6 +26,24 @@ THE SOFTWARE.
 
 /** JSDoc Property Parser */
 export namespace JsDoc {
+  // ----------------------------------------------------------------
+  // Quotes
+  // ----------------------------------------------------------------
+  function ConsumeQuote(content: string): [consumed: string, rest: string] {
+    if (!IsQuote(content)) return ['', content]
+    const quote = content[0]
+    for (let i = 1; i < content.length; i++) {
+      if (content[i] === quote) return [content.slice(1, i), content.slice(i)]
+      if (content[i] === '\n') return [content.slice(1, i), content.slice(i)]
+    }
+    return [content.slice(1), '']
+  }
+  function IsQuote(content: string) {
+    return content[0] === '"' || content[0] === "'"
+  }
+  // ----------------------------------------------------------------
+  // Decode
+  // ----------------------------------------------------------------
   function DecodeWithNonQuotedProperties(content: string): any {
     const parseFunction = new Function(`return (${content});`)
     return parseFunction()
@@ -38,6 +56,11 @@ export namespace JsDoc {
     }
   }
   function* ParseValue(key: string, content: string): IterableIterator<[string, any]> {
+    if (IsQuote(content)) {
+      const [consumed, rest] = ConsumeQuote(content)
+      yield [key, Decode(consumed)]
+      return yield* ParseContent(rest)
+    }
     for (let i = 0; i < content.length; i++) {
       if (content[i] === '\n' || content[i] === '-') {
         const value = content.slice(0, i).trim()
