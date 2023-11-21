@@ -162,6 +162,7 @@ export namespace TypeScriptToTypeBox {
   // code generation, we tend to prefer referential types as these can be both inlined or referenced in
   // the codegen target; and where different targets may have different referential requirements. It
   // should be possible to implement a more robust injection mechanism however. For review.
+  // prettier-ignore
   function InjectOptions(type: string, options: Record<string, unknown>): string {
     if (globalThis.Object.keys(options).length === 0) return type
     // unwrap for modifiers
@@ -173,7 +174,7 @@ export namespace TypeScriptToTypeBox {
     if (type.lastIndexOf(']') === type.length - 1) useTypeClone = true
     if (type.lastIndexOf(']') === type.length - 1) return `TypeClone.Clone(${type}, ${encoded})`
     // referenced type
-    if (type.indexOf('(') === -1) return `Type.Ref(${type}, ${encoded})`
+    if (type.indexOf('(') === -1) { useTypeClone = true; return `TypeClone.Type(${type}, ${encoded})` }
     if (type.lastIndexOf('()') === type.length - 2) return type.slice(0, type.length - 1) + `${encoded})`
     if (type.lastIndexOf('})') === type.length - 2) return type.slice(0, type.length - 1) + `, ${encoded})`
     if (type.lastIndexOf('])') === type.length - 2) return type.slice(0, type.length - 1) + `, ${encoded})`
@@ -412,12 +413,21 @@ export namespace TypeScriptToTypeBox {
   function* TypeReferenceNode(node: ts.TypeReferenceNode): IterableIterator<string> {
     const name = node.typeName.getText()
     const args = node.typeArguments ? `(${node.typeArguments.map((type) => Collect(type)).join(', ')})` : ''
+    // --------------------------------------------------------------
+    // Instance Types
+    // --------------------------------------------------------------
+    if (name === 'Date') return yield `Type.Date()`
+    if (name === 'Uint8Array') return yield `Type.Uint8Array()`
+    if (name === 'String') return yield `Type.String()`
+    if (name === 'Number') return yield `Type.Number()`
+    if (name === 'Boolean') return yield `Type.Boolean()`
+    if (name === 'Function') return yield `Type.Function([], Type.Unknown())`
+    // --------------------------------------------------------------
+    // Types
+    // --------------------------------------------------------------
     if (name === 'Array') return yield `Type.Array${args}`
     if (name === 'Record') return yield `Type.Record${args}`
     if (name === 'Partial') return yield `Type.Partial${args}`
-    if (name === 'Uint8Array') return yield `Type.Uint8Array()`
-    if (name === 'Date') return yield `Type.Date()`
-    if (name === 'Function') return yield `Type.Function([], Type.Unknown())`
     if (name === 'Required') return yield `Type.Required${args}`
     if (name === 'Omit') return yield `Type.Omit${args}`
     if (name === 'Pick') return yield `Type.Pick${args}`
