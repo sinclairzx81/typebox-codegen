@@ -9,7 +9,7 @@ test('Indexer:StringKey', () => {
     type T = S['x']
   `)
   const T = M.exports.get('T') as any
-  Assert.IsTrue(TypeGuard.TNumber(T))
+  Assert.IsTrue(TypeGuard.IsNumber(T))
 })
 test('Indexer:NumberKey', () => {
   const M = TypeScriptToModel.Generate(`
@@ -17,5 +17,5 @@ test('Indexer:NumberKey', () => {
     type T = S[0]
   `)
   const T = M.exports.get('T') as any
-  Assert.IsTrue(TypeGuard.TNumber(T))
+  Assert.IsTrue(TypeGuard.IsNumber(T))
 })

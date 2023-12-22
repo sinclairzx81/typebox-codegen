@@ -115,8 +115,8 @@ export namespace ModelToZod {
   function Object(schema: Types.TObject) {
     // prettier-ignore
     const properties = globalThis.Object.entries(schema.properties).map(([key, value]) => {
-      const optional = Types.TypeGuard.TOptional(value)
-      const readonly = Types.TypeGuard.TReadonly(value)
+      const optional = Types.TypeGuard.IsOptional(value)
+      const readonly = Types.TypeGuard.IsReadonly(value)
       const property = PropertyEncoder.Encode(key)
       // prettier-ignore
       return (
@@ -184,32 +184,32 @@ export namespace ModelToZod {
   function Visit(schema: Types.TSchema): string {
     if (schema.$id !== undefined) reference_map.set(schema.$id, schema)
     if (schema.$id !== undefined && emitted_set.has(schema.$id!)) return schema.$id!
-    if (Types.TypeGuard.TAny(schema)) return Any(schema)
-    if (Types.TypeGuard.TArray(schema)) return Array(schema)
-    if (Types.TypeGuard.TBigInt(schema)) return BigInt(schema)
-    if (Types.TypeGuard.TBoolean(schema)) return Boolean(schema)
-    if (Types.TypeGuard.TDate(schema)) return Date(schema)
-    if (Types.TypeGuard.TConstructor(schema)) return Constructor(schema)
-    if (Types.TypeGuard.TFunction(schema)) return Function(schema)
-    if (Types.TypeGuard.TInteger(schema)) return Integer(schema)
-    if (Types.TypeGuard.TIntersect(schema)) return Intersect(schema)
-    if (Types.TypeGuard.TLiteral(schema)) return Literal(schema)
-    if (Types.TypeGuard.TNever(schema)) return Never(schema)
-    if (Types.TypeGuard.TNull(schema)) return Null(schema)
-    if (Types.TypeGuard.TNumber(schema)) return Number(schema)
-    if (Types.TypeGuard.TObject(schema)) return Object(schema)
-    if (Types.TypeGuard.TPromise(schema)) return Promise(schema)
-    if (Types.TypeGuard.TRecord(schema)) return Record(schema)
-    if (Types.TypeGuard.TRef(schema)) return Ref(schema)
-    if (Types.TypeGuard.TString(schema)) return String(schema)
-    if (Types.TypeGuard.TTemplateLiteral(schema)) return TemplateLiteral(schema)
-    if (Types.TypeGuard.TThis(schema)) return This(schema)
-    if (Types.TypeGuard.TTuple(schema)) return Tuple(schema)
-    if (Types.TypeGuard.TUint8Array(schema)) return UInt8Array(schema)
-    if (Types.TypeGuard.TUndefined(schema)) return Undefined(schema)
-    if (Types.TypeGuard.TUnion(schema)) return Union(schema)
-    if (Types.TypeGuard.TUnknown(schema)) return Unknown(schema)
-    if (Types.TypeGuard.TVoid(schema)) return Void(schema)
+    if (Types.TypeGuard.IsAny(schema)) return Any(schema)
+    if (Types.TypeGuard.IsArray(schema)) return Array(schema)
+    if (Types.TypeGuard.IsBigInt(schema)) return BigInt(schema)
+    if (Types.TypeGuard.IsBoolean(schema)) return Boolean(schema)
+    if (Types.TypeGuard.IsDate(schema)) return Date(schema)
+    if (Types.TypeGuard.IsConstructor(schema)) return Constructor(schema)
+    if (Types.TypeGuard.IsFunction(schema)) return Function(schema)
+    if (Types.TypeGuard.IsInteger(schema)) return Integer(schema)
+    if (Types.TypeGuard.IsIntersect(schema)) return Intersect(schema)
+    if (Types.TypeGuard.IsLiteral(schema)) return Literal(schema)
+    if (Types.TypeGuard.IsNever(schema)) return Never(schema)
+    if (Types.TypeGuard.IsNull(schema)) return Null(schema)
+    if (Types.TypeGuard.IsNumber(schema)) return Number(schema)
+    if (Types.TypeGuard.IsObject(schema)) return Object(schema)
+    if (Types.TypeGuard.IsPromise(schema)) return Promise(schema)
+    if (Types.TypeGuard.IsRecord(schema)) return Record(schema)
+    if (Types.TypeGuard.IsRef(schema)) return Ref(schema)
+    if (Types.TypeGuard.IsString(schema)) return String(schema)
+    if (Types.TypeGuard.IsTemplateLiteral(schema)) return TemplateLiteral(schema)
+    if (Types.TypeGuard.IsThis(schema)) return This(schema)
+    if (Types.TypeGuard.IsTuple(schema)) return Tuple(schema)
+    if (Types.TypeGuard.IsUint8Array(schema)) return UInt8Array(schema)
+    if (Types.TypeGuard.IsUndefined(schema)) return Undefined(schema)
+    if (Types.TypeGuard.IsUnion(schema)) return Union(schema)
+    if (Types.TypeGuard.IsUnknown(schema)) return Unknown(schema)
+    if (Types.TypeGuard.IsVoid(schema)) return Void(schema)
     return UnsupportedType(schema)
   }
   function Collect(schema: Types.TSchema) {
@@ -240,7 +240,7 @@ export namespace ModelToZod {
     recursive_set.clear()
     emitted_set.clear()
     const buffer: string[] = [`import z from 'zod'`, '']
-    for (const type of model.types.filter((type) => Types.TypeGuard.TSchema(type))) {
+    for (const type of model.types.filter((type) => Types.TypeGuard.IsSchema(type))) {
       buffer.push(GenerateType(model, type, model.types))
     }
     return Formatter.Format(buffer.join('\n'))

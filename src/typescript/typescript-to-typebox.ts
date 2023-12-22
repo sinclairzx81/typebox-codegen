@@ -82,8 +82,6 @@ export namespace TypeScriptToTypeBox {
   let useOptions = false
   // (auto) tracked for injecting TSchema import statements
   let useGenerics = false
-  // (auto) tracked for mapped types
-  let useMapped = false
   // (auto) tracked for cases where composition requires deep clone
   let useTypeClone = false
   // (option) export override to ensure all schematics
@@ -223,11 +221,30 @@ export namespace TypeScriptToTypeBox {
     yield `Type.Union([\n${types}\n])`
   }
   function* MappedTypeNode(node: ts.MappedTypeNode): IterableIterator<string> {
-    useMapped = true
     const K = Collect(node.typeParameter)
     const T = Collect(node.type)
     const C = Collect(node.typeParameter.constraint)
-    yield `Mapped(${C}, ${K} => ${T})`
+    const readonly = node.readonlyToken !== undefined
+    const optional = node.questionToken !== undefined
+    const readonly_subtractive = readonly && ts.isMinusToken(node.readonlyToken)
+    const optional_subtractive = optional && ts.isMinusToken(node.questionToken)
+    // prettier-ignore
+    return yield (
+      (readonly && optional) ? (
+        (readonly_subtractive && optional_subtractive) ? `Type.Mapped(${C}, ${K} => Type.Readonly(Type.Optional(${T}, false), false))` :
+        (readonly_subtractive) ? `Type.Mapped(${C}, ${K} => Type.Readonly(Type.Optional(${T}), false))` :
+        (optional_subtractive) ? `Type.Mapped(${C}, ${K} => Type.Readonly(Type.Optional(${T}, false)))` :
+        `Type.Mapped(${C}, ${K} => Type.Readonly(Type.Optional(${T})))`
+      ) : (readonly) ? (
+        readonly_subtractive 
+          ? `Type.Mapped(${C}, ${K} => Type.Readonly(${T}, false))` 
+          : `Type.Mapped(${C}, ${K} => Type.Readonly(${T}))`
+      ) : (optional) ? (
+        optional_subtractive 
+          ? `Type.Mapped(${C}, ${K} => Type.Optional(${T}, false))` 
+          : `Type.Mapped(${C}, ${K} => Type.Optional(${T}))`
+      ) : `Type.Mapped(${C}, ${K} => ${T})`
+    )
   }
   function* MethodSignature(node: ts.MethodSignature): IterableIterator<string> {
     const parameters = node.parameters.map((parameter) => (parameter.dotDotDotToken !== undefined ? `...Type.Rest(${Collect(parameter)})` : Collect(parameter))).join(', ')
@@ -552,44 +569,8 @@ export namespace TypeScriptToTypeBox {
     if (useTypeClone) {
       set.add('TypeClone')
     }
-    if (useMapped) {
-      set.add('TemplateLiteralFinite')
-      set.add('TemplateLiteralParser')
-      set.add('TemplateLiteralGenerator')
-      set.add('TTemplateLiteral')
-      set.add('TPropertyKey')
-      set.add('TypeGuard')
-      set.add('TSchema')
-      set.add('TString')
-      set.add('TNumber')
-      set.add('TUnion')
-      set.add('TLiteral')
-    }
     const imports = [...set].join(', ')
     return `import { ${imports} } from '@sinclair/typebox'`
-  }
-  function MappedSupport() {
-    return useMapped
-      ? [
-          'type MappedContraintKey = TNumber | TString | TLiteral<TPropertyKey>',
-          'type MappedConstraint = TTemplateLiteral | TUnion<MappedContraintKey[]> | MappedContraintKey',
-          'type MappedFunction<C extends MappedConstraint, S extends TSchema = TSchema> = (C: C) => S',
-          '// prettier-ignore',
-          'function Mapped<C extends MappedConstraint, F extends MappedFunction<C>>(C: C, F: F) {',
-          '  return (',
-          '    TypeGuard.TTemplateLiteral(C) ? (() => {',
-          '      const E = TemplateLiteralParser.ParseExact(C.pattern)',
-          '      const K = TemplateLiteralFinite.Check(E) ? [...TemplateLiteralGenerator.Generate(E)] : []',
-          '      return Type.Object(K.reduce((A, K) => ({ ...A, [K]: F(Type.Literal(K) as any)}), {}))',
-          '    })() :',
-          '    TypeGuard.TUnion(C) ? Type.Object(C.anyOf.reduce((A, K) => ({ ...A, [K.const]: F(K as any)}), {})) : ',
-          '    TypeGuard.TString(C) ? Type.Record(C, F(C)) : ',
-          '    TypeGuard.TNumber(C) ? Type.Record(C, F(C)) : ',
-          '    Type.Object({ [C.const]: F(C) })',
-          '  )',
-          '}',
-        ].join('\n')
-      : ''
   }
   /** Generates TypeBox types from TypeScript interface and type definitions */
   export function Generate(typescriptCode: string, options?: TypeScriptToTypeBoxOptions) {
@@ -597,7 +578,6 @@ export namespace TypeScriptToTypeBox {
     useIdentifiers = options?.useIdentifiers ?? false
     useTypeBoxImport = options?.useTypeBoxImport ?? true
     typenames.clear()
-    useMapped = false
     useImports = false
     useOptions = false
     useGenerics = false
@@ -606,8 +586,7 @@ export namespace TypeScriptToTypeBox {
     const source = ts.createSourceFile('types.ts', typescriptCode, ts.ScriptTarget.ESNext, true)
     const declarations = [...Visit(source)].join('\n\n')
     const imports = ImportStatement()
-    const mapped = MappedSupport()
-    const typescript = [imports, '', mapped, '', declarations].join('\n')
+    const typescript = [imports, '', '', declarations].join('\n')
     const assertion = ts.transpileModule(typescript, transpilerOptions)
     if (assertion.diagnostics && assertion.diagnostics.length > 0) {
       throw new TypeScriptToTypeBoxError(assertion.diagnostics)

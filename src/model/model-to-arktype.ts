@@ -75,7 +75,7 @@ export namespace ModelToArkType {
       return Wrap(`${type}`)
     }
   }
-  function ConstrainedNumericType(type: string, options: Types.NumericOptions<number | bigint>) {
+  function ConstrainedNumericType(type: string, options: Types.NumberOptions | Types.BigIntOptions) {
     // prettier-ignore
     const minimum = IsDefined<number>(options.exclusiveMinimum) ? (options.exclusiveMinimum + 1) :
                     IsDefined<number>(options.minimum) ? (options.minimum) :
@@ -151,7 +151,7 @@ export namespace ModelToArkType {
   function Object(schema: Types.TObject) {
     const properties = globalThis.Object.entries(schema.properties)
       .map(([key, schema]) => {
-        const optional = Types.TypeGuard.TOptional(schema)
+        const optional = Types.TypeGuard.IsOptional(schema)
         const property1 = PropertyEncoder.Encode(key)
         const property2 = optional ? `'${property1}?'` : `${property1}`
         return `${property2}: ${Visit(schema)}`
@@ -203,32 +203,32 @@ export namespace ModelToArkType {
   function Visit(schema: Types.TSchema): string {
     if (schema.$id !== undefined) reference_map.set(schema.$id, schema)
     if (schema.$id !== undefined && emitted_types.has(schema.$id!)) return `'${schema.$id!}'`
-    if (Types.TypeGuard.TAny(schema)) return Any(schema)
-    if (Types.TypeGuard.TArray(schema)) return Array(schema)
-    if (Types.TypeGuard.TBigInt(schema)) return BigInt(schema)
-    if (Types.TypeGuard.TBoolean(schema)) return Boolean(schema)
-    if (Types.TypeGuard.TConstructor(schema)) return Constructor(schema)
-    if (Types.TypeGuard.TDate(schema)) return Date(schema)
-    if (Types.TypeGuard.TFunction(schema)) return Function(schema)
-    if (Types.TypeGuard.TInteger(schema)) return Integer(schema)
-    if (Types.TypeGuard.TIntersect(schema)) return Intersect(schema)
-    if (Types.TypeGuard.TLiteral(schema)) return Literal(schema)
-    if (Types.TypeGuard.TNever(schema)) return Never(schema)
-    if (Types.TypeGuard.TNull(schema)) return Null(schema)
-    if (Types.TypeGuard.TNumber(schema)) return Number(schema)
-    if (Types.TypeGuard.TObject(schema)) return Object(schema)
-    if (Types.TypeGuard.TPromise(schema)) return Promise(schema)
-    if (Types.TypeGuard.TRecord(schema)) return Record(schema)
-    if (Types.TypeGuard.TRef(schema)) return Ref(schema)
-    if (Types.TypeGuard.TString(schema)) return String(schema)
-    if (Types.TypeGuard.TTemplateLiteral(schema)) return TemplateLiteral(schema)
-    if (Types.TypeGuard.TThis(schema)) return This(schema)
-    if (Types.TypeGuard.TTuple(schema)) return Tuple(schema)
-    if (Types.TypeGuard.TUint8Array(schema)) return UInt8Array(schema)
-    if (Types.TypeGuard.TUndefined(schema)) return Undefined(schema)
-    if (Types.TypeGuard.TUnion(schema)) return Union(schema)
-    if (Types.TypeGuard.TUnknown(schema)) return Unknown(schema)
-    if (Types.TypeGuard.TVoid(schema)) return Void(schema)
+    if (Types.TypeGuard.IsAny(schema)) return Any(schema)
+    if (Types.TypeGuard.IsArray(schema)) return Array(schema)
+    if (Types.TypeGuard.IsBigInt(schema)) return BigInt(schema)
+    if (Types.TypeGuard.IsBoolean(schema)) return Boolean(schema)
+    if (Types.TypeGuard.IsConstructor(schema)) return Constructor(schema)
+    if (Types.TypeGuard.IsDate(schema)) return Date(schema)
+    if (Types.TypeGuard.IsFunction(schema)) return Function(schema)
+    if (Types.TypeGuard.IsInteger(schema)) return Integer(schema)
+    if (Types.TypeGuard.IsIntersect(schema)) return Intersect(schema)
+    if (Types.TypeGuard.IsLiteral(schema)) return Literal(schema)
+    if (Types.TypeGuard.IsNever(schema)) return Never(schema)
+    if (Types.TypeGuard.IsNull(schema)) return Null(schema)
+    if (Types.TypeGuard.IsNumber(schema)) return Number(schema)
+    if (Types.TypeGuard.IsObject(schema)) return Object(schema)
+    if (Types.TypeGuard.IsPromise(schema)) return Promise(schema)
+    if (Types.TypeGuard.IsRecord(schema)) return Record(schema)
+    if (Types.TypeGuard.IsRef(schema)) return Ref(schema)
+    if (Types.TypeGuard.IsString(schema)) return String(schema)
+    if (Types.TypeGuard.IsTemplateLiteral(schema)) return TemplateLiteral(schema)
+    if (Types.TypeGuard.IsThis(schema)) return This(schema)
+    if (Types.TypeGuard.IsTuple(schema)) return Tuple(schema)
+    if (Types.TypeGuard.IsUint8Array(schema)) return UInt8Array(schema)
+    if (Types.TypeGuard.IsUndefined(schema)) return Undefined(schema)
+    if (Types.TypeGuard.IsUnion(schema)) return Union(schema)
+    if (Types.TypeGuard.IsUnknown(schema)) return Unknown(schema)
+    if (Types.TypeGuard.IsVoid(schema)) return Void(schema)
     return UnsupportedType(schema)
   }
   function Collect(schema: Types.TSchema) {
@@ -252,12 +252,12 @@ export namespace ModelToArkType {
     emitted_types.clear()
     const buffer: string[] = []
     buffer.push('export const types = scope({')
-    for (const type of model.types.filter((type) => Types.TypeGuard.TSchema(type))) {
+    for (const type of model.types.filter((type) => Types.TypeGuard.IsSchema(type))) {
       buffer.push(`${GenerateType(type, model.types)},`)
     }
     buffer.push('}).compile()')
     buffer.push('\n')
-    for (const type of model.types.filter((type) => Types.TypeGuard.TSchema(type))) {
+    for (const type of model.types.filter((type) => Types.TypeGuard.IsSchema(type))) {
       buffer.push(`export type ${type.$id} = typeof ${type.$id}.infer`)
       buffer.push(`export const ${type.$id} = types.${type.$id}`)
     }
