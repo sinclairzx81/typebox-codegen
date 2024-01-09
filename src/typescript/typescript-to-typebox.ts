@@ -341,7 +341,7 @@ export namespace TypeScriptToTypeBox {
       const members = PropertiesFromTypeElementArray(node.members)
       const staticDeclaration = `${exports}type ${node.name.getText()}<${constraints}> = Static<ReturnType<typeof ${node.name.getText()}<${names}>>>`
       const rawTypeExpression = IsRecursiveType(node) ? `Type.Recursive(This => Type.Object(${members}))` : `Type.Object(${members})`
-      const typeExpression = heritage.length === 0 ? rawTypeExpression : `Type.Intersect([${heritage.join(', ')}, ${rawTypeExpression}])`
+      const typeExpression = heritage.length === 0 ? rawTypeExpression : `Type.Composite([${heritage.join(', ')}, ${rawTypeExpression}])`
       const type = InjectOptions(typeExpression, options)
       const typeDeclaration = `${exports}const ${node.name.getText()} = <${constraints}>(${parameters}) => ${type}`
       yield `${staticDeclaration}\n${typeDeclaration}`
@@ -352,7 +352,7 @@ export namespace TypeScriptToTypeBox {
       const members = PropertiesFromTypeElementArray(node.members)
       const staticDeclaration = `${exports}type ${node.name.getText()} = Static<typeof ${node.name.getText()}>`
       const rawTypeExpression = IsRecursiveType(node) ? `Type.Recursive(This => Type.Object(${members}))` : `Type.Object(${members})`
-      const typeExpression = heritage.length === 0 ? rawTypeExpression : `Type.Intersect([${heritage.join(', ')}, ${rawTypeExpression}])`
+      const typeExpression = heritage.length === 0 ? rawTypeExpression : `Type.Composite([${heritage.join(', ')}, ${rawTypeExpression}])`
       const type = InjectOptions(typeExpression, options)
       const typeDeclaration = `${exports}const ${node.name.getText()} = ${type}`
       yield `${staticDeclaration}\n${typeDeclaration}`
@@ -390,9 +390,10 @@ export namespace TypeScriptToTypeBox {
     recursiveDeclaration = null
   }
   function* HeritageClause(node: ts.HeritageClause): IterableIterator<string> {
+    // Consideration: This may be better expressed as a heritage type (for review)
     const types = node.types.map((node) => Collect(node))
     if (types.length === 1) return yield types[0]
-    yield `Type.Intersect([${types.join(', ')}])`
+    yield `Type.Composite([${types.join(', ')}])`
   }
   function* IndexedAccessType(node: ts.IndexedAccessTypeNode): IterableIterator<string> {
     const obj = node.objectType.getText()
