@@ -83,7 +83,7 @@ export namespace TypeScriptToTypeBox {
   // (auto) tracked for injecting TSchema import statements
   let useGenerics = false
   // (auto) tracked for cases where composition requires deep clone
-  let useTypeClone = false
+  let useCloneType = false
   // (option) export override to ensure all schematics
   let useExportsEverything = false
   // (option) inject identifiers
@@ -169,10 +169,10 @@ export namespace TypeScriptToTypeBox {
     if (type.indexOf('Type.Optional') === 0) return `Type.Optional( ${InjectOptions(UnwrapModifier(type), options)} )`
     const encoded = JSON.stringify(options)
     // indexer type
-    if (type.lastIndexOf(']') === type.length - 1) useTypeClone = true
-    if (type.lastIndexOf(']') === type.length - 1) return `TypeClone.Clone(${type}, ${encoded})`
+    if (type.lastIndexOf(']') === type.length - 1) useCloneType = true
+    if (type.lastIndexOf(']') === type.length - 1) return `CloneType(${type}, ${encoded})`
     // referenced type
-    if (type.indexOf('(') === -1) { useTypeClone = true; return `TypeClone.Type(${type}, ${encoded})` }
+    if (type.indexOf('(') === -1) { useCloneType = true; return `CloneType(${type}, ${encoded})` }
     if (type.lastIndexOf('()') === type.length - 2) return type.slice(0, type.length - 1) + `${encoded})`
     if (type.lastIndexOf('})') === type.length - 2) return type.slice(0, type.length - 1) + `, ${encoded})`
     if (type.lastIndexOf('])') === type.length - 2) return type.slice(0, type.length - 1) + `, ${encoded})`
@@ -566,8 +566,8 @@ export namespace TypeScriptToTypeBox {
     if (useOptions) {
       set.add('SchemaOptions')
     }
-    if (useTypeClone) {
-      set.add('TypeClone')
+    if (useCloneType) {
+      set.add('CloneType')
     }
     const imports = [...set].join(', ')
     return `import { ${imports} } from '@sinclair/typebox'`
@@ -581,7 +581,7 @@ export namespace TypeScriptToTypeBox {
     useImports = false
     useOptions = false
     useGenerics = false
-    useTypeClone = false
+    useCloneType = false
     blockLevel = 0
     const source = ts.createSourceFile('types.ts', typescriptCode, ts.ScriptTarget.ESNext, true)
     const declarations = [...Visit(source)].join('\n\n')
