@@ -45,8 +45,8 @@ export namespace JsDoc {
   // Decode
   // ----------------------------------------------------------------
   function DecodeWithNonQuotedProperties(content: string): any {
-    const parseFunction = new Function(`return (${content});`)
-    return parseFunction()
+    // todo: implement better inline object parser
+    return content in globalThis ? content : new Function(`return (${content});`)()
   }
   function Decode(content: string) {
     try {

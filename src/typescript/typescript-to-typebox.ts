@@ -338,13 +338,13 @@ export namespace TypeScriptToTypeBox {
       const constraints = node.typeParameters.map((param) => `${Collect(param)} extends TSchema`).join(', ')
       const parameters = node.typeParameters.map((param) => `${Collect(param)}: ${Collect(param)}`).join(', ')
       const members = PropertiesFromTypeElementArray(node.members)
-      // const names = node.typeParameters.map((param) => `${Collect(param)}`).join(', ')
-      // const staticDeclaration = `${exports}type ${node.name.getText()}<${constraints}> = Static<ReturnType<typeof ${node.name.getText()}<${names}>>>`
+      const names = node.typeParameters.map((param) => `${Collect(param)}`).join(', ')
+      const staticDeclaration = `${exports}type ${node.name.getText()}<${constraints}> = Static<ReturnType<typeof ${node.name.getText()}<${names}>>>`
       const rawTypeExpression = IsRecursiveType(node) ? `Type.Recursive(This => Type.Object(${members}))` : `Type.Object(${members})`
       const typeExpression = heritage.length === 0 ? rawTypeExpression : `Type.Composite([${heritage.join(', ')}, ${rawTypeExpression}])`
       const type = InjectOptions(typeExpression, options)
       const typeDeclaration = `${exports}const ${node.name.getText()} = <${constraints}>(${parameters}) => ${type}`
-      yield `${typeDeclaration}`
+      yield `${staticDeclaration}\n${typeDeclaration}`
     } else {
       const exports = IsExport(node) ? 'export ' : ''
       const identifier = ResolveIdentifier(node)
@@ -373,10 +373,10 @@ export namespace TypeScriptToTypeBox {
       const type_0 = Collect(node.type)
       const type_1 = isRecursiveType ? `Type.Recursive(This => ${type_0})` : type_0
       const type_2 = InjectOptions(type_1, options)
-      // const names = node.typeParameters.map((param) => Collect(param)).join(', ')
-      // const staticDeclaration = `${exports}type ${node.name.getText()}<${constraints}> = Static<ReturnType<typeof ${node.name.getText()}<${names}>>>`
+      const names = node.typeParameters.map((param) => Collect(param)).join(', ')
+      const staticDeclaration = `${exports}type ${node.name.getText()}<${constraints}> = Static<ReturnType<typeof ${node.name.getText()}<${names}>>>`
       const typeDeclaration = `${exports}const ${node.name.getText()} = <${constraints}>(${parameters}) => ${type_2}`
-      yield `${typeDeclaration}`
+      yield `${staticDeclaration}\n${typeDeclaration}`
     } else {
       const exports = IsExport(node) ? 'export ' : ''
       const options = useIdentifiers ? { $id: ResolveIdentifier(node), ...ResolveOptions(node) } : { ...ResolveOptions(node) }
@@ -390,13 +390,10 @@ export namespace TypeScriptToTypeBox {
     recursiveDeclaration = null
   }
   function* HeritageClause(node: ts.HeritageClause): IterableIterator<string> {
-    // Consideration: This may be better expressed as a heritage type (for review)
     const types = node.types.map((node) => Collect(node))
-    if (types.length === 1) return yield types[0]
-    // yield `Type.Composite([${types.join(', ')}])`
-
-    // Note: Heritage clauses are only used in extends cases, and where Composite
-    // is the exterior type. These types will be prepended to the Composite array.
+    // Note: Heritage clauses are only used in interface extends cases. We expect the 
+    // outer type to be a Composite, and where this type will be prepended before the
+    // interface definition.
     yield types.join(', ')
   }
   function* IndexedAccessType(node: ts.IndexedAccessTypeNode): IterableIterator<string> {
