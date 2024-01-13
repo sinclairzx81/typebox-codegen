@@ -44,7 +44,7 @@ export namespace ModelToTypeScript {
     return 'bigint'
   }
   function Constructor(schema: Types.TConstructor) {
-    const params = schema.parameters.map((param) => Visit(param)).join(', ')
+    const params = schema.parameters.map((param, i) => `param${i}: ${Visit(param)}`).join(', ')
     const returns = Visit(schema.returns)
     return `(new (${params}) => ${returns})`
   }
@@ -52,7 +52,7 @@ export namespace ModelToTypeScript {
     return 'Date'
   }
   function Function(schema: Types.TFunction) {
-    const params = schema.parameters.map((param) => Visit(param)).join(', ')
+    const params = schema.parameters.map((param, i) => `param${i}: ${Visit(param)}`).join(', ')
     const returns = Visit(schema.returns)
     return `((${params}) => ${returns})`
   }

@@ -391,7 +391,7 @@ export namespace TypeScriptToTypeBox {
   }
   function* HeritageClause(node: ts.HeritageClause): IterableIterator<string> {
     const types = node.types.map((node) => Collect(node))
-    // Note: Heritage clauses are only used in interface extends cases. We expect the 
+    // Note: Heritage clauses are only used in interface extends cases. We expect the
     // outer type to be a Composite, and where this type will be prepended before the
     // interface definition.
     yield types.join(', ')
