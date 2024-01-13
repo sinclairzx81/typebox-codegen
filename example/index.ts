@@ -25,6 +25,8 @@ export type B = {
 } 
 export type T = A & B 
 
+export type F = (a: number) => void
+
 type M = {[K in keyof T]: 1 }
 `
 // ----------------------------------------------------------------------------
