@@ -81,12 +81,18 @@ export namespace ModelToTypeScript {
   function Number(schema: Types.TNumber) {
     return 'number'
   }
+  // prettier-ignore
   function Object(schema: Types.TObject) {
-    const properties: string = globalThis.Object.entries(schema.properties)
-      .map(([key, value]) => {
-        return `${key}: ${Visit(value)}`
-      })
-      .join(',\n')
+    const properties: string = globalThis.Object.entries(schema.properties).map(([key, property]) => {
+      const optional = Types.TypeGuard.IsOptional(property)
+      const readonly = Types.TypeGuard.IsReadonly(property)
+      return (
+        (optional && readonly) ? `readonly ${key}?: ${Visit(property)}` :
+        readonly ? `readonly ${key}: ${Visit(property)}` :
+        optional ? `${key}?: ${Visit(property)}` :
+        `${key}: ${Visit(property)}`
+      )
+    }).join(',\n')
     return `{\n${properties}\n}`
   }
   function Promise(schema: Types.TPromise) {
