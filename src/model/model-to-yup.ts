@@ -147,7 +147,10 @@ export namespace ModelToYup {
     return Type(schema, `(y.mixed((value): value is any => value === undefined) as y.MixedSchema<undefined>)`)
   }
   function Union(schema: Types.TUnion) {
-    return Type(schema, `y.mixed().oneOf([${schema.anyOf.map((schema) => Visit(schema)).join(`, `)}]).required()`)
+    const isLiteralUnion = schema.anyOf.every((schema) => Types.TypeGuard.IsLiteral(schema))
+    return isLiteralUnion
+      ? Type(schema, `y.mixed().oneOf([${schema.anyOf.map((schema) => JSON.stringify(schema.const)).join(`, `)}]).required()`)
+      : Type(schema, `y.mixed().oneOf([${schema.anyOf.map((schema) => Visit(schema)).join(`, `)}]).required()`)
   }
   function Unknown(schema: Types.TUnknown) {
     return Type(schema, `(y.mixed((value): value is any => true).required() as y.MixedSchema<unknown>)`)
