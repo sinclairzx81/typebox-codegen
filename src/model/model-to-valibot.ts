@@ -81,7 +81,7 @@ export namespace ModelToValibot {
   }
   function Intersect(schema: Types.TIntersect) {
     const inner = schema.allOf.map((inner) => Visit(inner))
-    return Type(`v.merge`, `[${inner.join(', ')}]`, [])
+    return Type(`v.intersect`, `[${inner.join(', ')}]`, [])
   }
   function Literal(schema: Types.TLiteral) {
     // prettier-ignore
