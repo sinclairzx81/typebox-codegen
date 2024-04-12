@@ -93,7 +93,7 @@ export namespace ModelToValibot {
     return Type(`v.never`, null, [])
   }
   function Null(schema: Types.TNull) {
-    return Type(`v.nullType`, null, [])
+    return Type(`v.null_`, null, [])
   }
   function String(schema: Types.TString) {
     const constraints: string[] = []
