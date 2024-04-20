@@ -119,6 +119,9 @@ export namespace TypeScriptToTypeBox {
   function IsOptionalProperty(node: ts.PropertySignature) {
     return node.questionToken !== undefined
   }
+  function IsOptionalParameter(node: ts.ParameterDeclaration) {
+    return node.questionToken !== undefined
+  }
   function IsExport(node: ts.InterfaceDeclaration | ts.TypeAliasDeclaration | ts.EnumDeclaration | ts.ModuleDeclaration): boolean {
     return blockLevel === 0 && (useExportsEverything || (node.modifiers !== undefined && node.modifiers.find((modifier) => modifier.getText() === 'export') !== undefined))
   }
@@ -287,7 +290,7 @@ export namespace TypeScriptToTypeBox {
     }
   }
   function* Parameter(node: ts.ParameterDeclaration): IterableIterator<string> {
-    yield Collect(node.type)
+    yield IsOptionalParameter(node) ? `Type.Optional(${Collect(node.type)})` : Collect(node.type)
   }
   function* FunctionTypeNode(node: ts.FunctionTypeNode): IterableIterator<string> {
     const parameters = node.parameters.map((parameter) => (parameter.dotDotDotToken !== undefined ? `...Type.Rest(${Collect(parameter)})` : Collect(parameter))).join(', ')

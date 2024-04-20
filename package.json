@@ -1,6 +1,6 @@
 {
   "name": "@sinclair/typebox-codegen",
-  "version": "0.9.10",
+  "version": "0.9.11",
   "description": "Code Generation Tools for TypeBox",
   "main": "index.js",
   "keywords": [
@@ -31,7 +31,7 @@
   "dependencies": {
     "@sinclair/typebox": "^0.32.6",
     "prettier": "^2.8.7",
-    "typescript": "^5.1.6"
+    "typescript": "^5.4.5"
   },
   "prettier": {
     "printWidth": 240,
