@@ -60,7 +60,7 @@ export namespace ModelToTypeScript {
     return 'number'
   }
   function Intersect(schema: Types.TIntersect) {
-    return schema.allOf.map((schema) => Visit(schema)).join(' & ')
+    return `(${schema.allOf.map((schema) => Visit(schema)).join(' & ')})`
   }
   function Literal(schema: Types.TLiteral) {
     if (typeof schema.const === 'string') {
@@ -128,7 +128,7 @@ export namespace ModelToTypeScript {
     return `undefined`
   }
   function Union(schema: Types.TUnion) {
-    return schema.anyOf.map((schema) => Visit(schema)).join(' | ')
+    return `(${schema.anyOf.map((schema) => Visit(schema)).join(' | ')})`
   }
   function Unknown(schema: Types.TUnknown) {
     return `unknown`
