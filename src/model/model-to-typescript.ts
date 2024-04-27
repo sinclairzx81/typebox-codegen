@@ -29,6 +29,48 @@ import { Formatter } from '../common/formatter'
 import { TypeCompiler } from '@sinclair/typebox/compiler'
 import * as Types from '@sinclair/typebox'
 
+// ------------------------------------------------------------------
+// Character
+// ------------------------------------------------------------------
+namespace Character {
+  export function DollarSign(code: number) {
+    return code === 36
+  }
+  export function IsUnderscore(code: number) {
+    return code === 95
+  }
+  export function IsAlpha(code: number) {
+    return (code >= 65 && code <= 90) || (code >= 97 && code <= 122)
+  }
+  export function IsNumeric(code: number) {
+    return code >= 48 && code <= 57
+  }
+}
+// ------------------------------------------------------------------
+// PropertyKey
+// ------------------------------------------------------------------
+namespace PropertyKey {
+  function IsFirstCharacterNumeric(value: string) {
+    if (value.length === 0) return false
+    return Character.IsNumeric(value.charCodeAt(0))
+  }
+  function IsAccessor(value: string) {
+    if (IsFirstCharacterNumeric(value)) return false
+    for (let i = 0; i < value.length; i++) {
+      const code = value.charCodeAt(i)
+      const check = Character.IsAlpha(code) || Character.IsNumeric(code) || Character.DollarSign(code) || Character.IsUnderscore(code)
+      if (!check) return false
+    }
+    return true
+  }
+  function EscapeHyphen(key: string) {
+    return key.replace(/'/g, "\\'")
+  }
+  export function Encode(key: string) {
+    return IsAccessor(key) ? `${key}` : `'${EscapeHyphen(key)}'`
+  }
+}
+
 export namespace ModelToTypeScript {
   function Any(schema: Types.TAny) {
     return 'any'
@@ -90,7 +132,7 @@ export namespace ModelToTypeScript {
         (optional && readonly) ? `readonly ${key}?: ${Visit(property)}` :
         readonly ? `readonly ${key}: ${Visit(property)}` :
         optional ? `${key}?: ${Visit(property)}` :
-        `${key}: ${Visit(property)}`
+        `${PropertyKey.Encode(key)}: ${Visit(property)}`
       )
     }).join(',\n')
     return `{\n${properties}\n}`
