@@ -416,6 +416,9 @@ export namespace TypeScriptToTypeBox {
   function* ParenthesizedTypeNode(node: ts.ParenthesizedTypeNode): IterableIterator<string> {
     yield Collect(node.type)
   }
+  function* PropertyAccessExpression(node: ts.PropertyAccessExpression): IterableIterator<string> {
+    yield node.getText()
+  }
   function* RestTypeNode(node: ts.RestTypeNode): IterableIterator<string> {
     yield `...Type.Rest(${node.type.getText()})`
   }
@@ -530,6 +533,7 @@ export namespace TypeScriptToTypeBox {
     if (ts.isModuleBlock(node)) return yield* ModuleBlock(node)
     if (ts.isParameter(node)) return yield* Parameter(node)
     if (ts.isParenthesizedTypeNode(node)) return yield* ParenthesizedTypeNode(node)
+    if (ts.isPropertyAccessExpression(node)) return yield* PropertyAccessExpression(node)
     if (ts.isRestTypeNode(node)) return yield* RestTypeNode(node)
     if (ts.isTupleTypeNode(node)) return yield* TupleTypeNode(node)
     if (ts.isTemplateLiteralTypeNode(node)) return yield* TemplateLiteralTypeNode(node)
