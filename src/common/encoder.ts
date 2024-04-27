@@ -35,7 +35,7 @@ namespace Character {
     return code === 95
   }
   export function IsAlpha(code: number) {
-    return (code >= 64 && code <= 90) || (code >= 97 && code <= 122)
+    return (code >= 65 && code <= 90) || (code >= 97 && code <= 122)
   }
   export function IsNumeric(code: number) {
     return code >= 48 && code <= 57
@@ -73,7 +73,7 @@ export namespace PropertyEncoder {
     if (value.length === 0) return false
     return Character.IsNumeric(value.charCodeAt(0))
   }
-  function IsSafeProperty(value: string) {
+  function IsAccessor(value: string) {
     if (IsFirstCharacterNumeric(value)) return false
     for (let i = 0; i < value.length; i++) {
       const code = value.charCodeAt(i)
@@ -82,10 +82,10 @@ export namespace PropertyEncoder {
     }
     return true
   }
-  function Quoted(value: string) {
-    return `'${value}'`
+  function EscapeHyphen(key: string) {
+    return key.replace(/'/g, "\\'")
   }
-  export function Encode(value: string) {
-    return IsSafeProperty(value) ? value : Quoted(value)
+  export function Encode(key: string) {
+    return IsAccessor(key) ? `${key}` : `'${EscapeHyphen(key)}'`
   }
 }
