@@ -479,6 +479,9 @@ export namespace TypeScriptToTypeBox {
     if (text === 'null') return yield `Type.Null()`
     yield `Type.Literal(${node.getText()})`
   }
+  function* NamedTupleMember(node: ts.NamedTupleMember): IterableIterator<string> {
+    yield* Collect(node.type)
+  }
   function* ModuleDeclaration(node: ts.ModuleDeclaration): IterableIterator<string> {
     const export_specifier = IsExport(node) ? 'export ' : ''
     const module_specifier = IsNamespace(node) ? 'namespace' : 'module'
@@ -516,6 +519,7 @@ export namespace TypeScriptToTypeBox {
     if (ts.isIndexSignatureDeclaration(node)) return yield* isIndexSignatureDeclaration(node)
     if (ts.isInterfaceDeclaration(node)) return yield* InterfaceDeclaration(node)
     if (ts.isLiteralTypeNode(node)) return yield* LiteralTypeNode(node)
+    if (ts.isNamedTupleMember(node)) return yield* NamedTupleMember(node)
     if (ts.isPropertySignature(node)) return yield* PropertySignature(node)
     if (ts.isModuleDeclaration(node)) return yield* ModuleDeclaration(node)
     if (ts.isIdentifier(node)) return yield node.getText()
