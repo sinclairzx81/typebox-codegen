@@ -27,8 +27,6 @@ THE SOFTWARE.
 import { TSchema } from '@sinclair/typebox'
 
 export interface TypeBoxModel {
-  /** Exports from evaluated module */
-  exports: Map<string, TSchema | Function>
-  /** Types with generated identifiers */
+  /** TypeBox types with generated identifiers */
   types: TSchema[]
 }

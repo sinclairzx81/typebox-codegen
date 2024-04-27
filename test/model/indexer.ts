@@ -8,7 +8,7 @@ test('Indexer:StringKey', () => {
     type S = { x: number }
     type T = S['x']
   `)
-  const T = M.exports.get('T') as any
+  const T = M.types.find((type) => type.$id === 'T') as any
   Assert.IsTrue(TypeGuard.IsNumber(T))
 })
 test('Indexer:NumberKey', () => {
@@ -16,6 +16,6 @@ test('Indexer:NumberKey', () => {
     type S = { 0: number }
     type T = S[0]
   `)
-  const T = M.exports.get('T') as any
+  const T = M.types.find((type) => type.$id === 'T') as any
   Assert.IsTrue(TypeGuard.IsNumber(T))
 })
