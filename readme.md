@@ -46,9 +46,9 @@ console.log(Code)
 
 ## Overview
 
-TypeBox-Codegen is a code generation tool that converts TypeScript types into TypeBox types as well as several other schema and library representations. It works by extracting structural type information from the TypeScript compiler then remaps it into a TypeBox representation (referred to as a Model). This Model can then be passed on to various code generators which generate through TypeBox schema introspection.
+TypeBox-Codegen is a code generation tool that transforms TypeScript types into TypeBox types as well as several other schema and library representations. It works by mapping structural type information from the TypeScript compiler into a TypeBox model. This model is then passed on to code generators which generate via TypeBox schema introspection.
 
-The library contains code transformations for libraries such as [zod](https://github.com/colinhacks/zod), [io-ts](https://github.com/gcanti/io-ts), [arktype](https://github.com/arktypeio/arktype) and [valibot](https://github.com/fabian-hiller/valibot), assert function generators for JavaScript and TypeScript (derived from TypeBox's TypeCompiler) as well as JSON Schema derived from TypeBox's raw schematics.
+The library contains code transformations for libraries such as [zod](https://github.com/colinhacks/zod), [effect](https://github.com/Effect-TS/effect), [arktype](https://github.com/arktypeio/arktype), [io-ts](https://github.com/gcanti/io-ts) and [valibot](https://github.com/fabian-hiller/valibot), assertion generators for JavaScript and TypeScript as well as Json Schema derived from TypeBox's raw schematics.
 
 [TypeBox Workbench Example](https://sinclairzx81.github.io/typebox-workbench/)
 
@@ -106,6 +106,7 @@ console.log('Model To Value', Codegen.ModelToValue.Generate(model))
 console.log('Model To Yup', Codegen.ModelToYup.Generate(model))
 console.log('Model To Zod', Codegen.ModelToZod.Generate(model))
 console.log('Model To ArkType', Codegen.ModelToArkType.Generate(model))
+console.log('Model To Effect', Codegen.ModelToEffect.Generate(model))
 ```
 
 ## Running Local
