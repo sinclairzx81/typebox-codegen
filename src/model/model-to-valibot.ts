@@ -85,8 +85,8 @@ export namespace ModelToValibot {
   }
   function Literal(schema: Types.TLiteral) {
     // prettier-ignore
-    return typeof schema.const === `string` 
-      ? Type(`v.literal`, `'${schema.const}'`, []) 
+    return typeof schema.const === `string`
+      ? Type(`v.literal`, `'${schema.const}'`, [])
       : Type(`v.literal`, `${schema.const}`, [])
   }
   function Never(schema: Types.TNever) {
@@ -99,6 +99,15 @@ export namespace ModelToValibot {
     const constraints: string[] = []
     if (IsDefined<number>(schema.maxLength)) constraints.push(`v.maxLength(${schema.maxLength})`)
     if (IsDefined<number>(schema.minLength)) constraints.push(`v.minLength(${schema.minLength})`)
+    if (IsDefined<string>(schema.format)) {
+      switch (schema.format) {
+        case 'date':
+          constraints.push(`v.isoDate()`)
+          break
+        default:
+          throw new Error(`Unsupported format: ${schema.format}`)
+      }
+    }
     return Type(`v.string`, null, constraints)
   }
   function Number(schema: Types.TNumber) {
