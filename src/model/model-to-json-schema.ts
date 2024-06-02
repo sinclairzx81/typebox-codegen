@@ -32,6 +32,10 @@ import * as Types from '@sinclair/typebox'
 // ModelToJsonSchema
 // --------------------------------------------------------------------------
 export namespace ModelToJsonSchema {
+  interface JsonSchemaOptions {
+    format?: 'js' | 'json'
+  }
+
   function Any(schema: Types.TAny): Types.TSchema {
     return schema
   }
@@ -155,13 +159,43 @@ export namespace ModelToJsonSchema {
     if (Types.TypeGuard.IsVoid(schema)) return Void(schema)
     return UnsupportedType(schema)
   }
-  export function Generate(model: TypeBoxModel): string {
-    const buffer: string[] = []
+
+  interface Formatter {
+    push(type: Types.TSchema, schema: Types.TSchema): void
+    finalize(): string
+  }
+  class JsFormatter implements Formatter {
+    buffer: string[] = []
+
+    push(type: Types.TSchema, schema: Types.TSchema) {
+      const encode = JSON.stringify(schema, null, 2)
+      this.buffer.push(`export const ${type.$id} = ${encode}`)
+    }
+    finalize() {
+      return Formatter.Format(this.buffer.join('\n'))
+    }
+  }
+
+  class JsonFormatter implements Formatter {
+    objs: Record<string, any> = {}
+
+    push(type: Types.TSchema, schema: Types.TSchema) {
+      if (type.$id !== undefined) this.objs[type.$id] = schema
+    }
+    finalize(): string {
+      return JSON.stringify(this.objs, null, 2)
+    }
+  }
+
+  export function Generate(model: TypeBoxModel, options?: JsonSchemaOptions): string {
+    const format = options?.format ?? 'js'
+    const formatter = format === 'js' ? new JsFormatter() : new JsonFormatter()
+
     for (const type of model.types.filter((type) => Types.TypeGuard.IsSchema(type))) {
       const schema = Visit(type)
-      const encode = JSON.stringify(schema, null, 2)
-      buffer.push(`export const ${type.$id} = ${encode}`)
+      formatter.push(type, schema)
     }
-    return Formatter.Format(buffer.join('\n'))
+
+    return formatter.finalize()
   }
 }
