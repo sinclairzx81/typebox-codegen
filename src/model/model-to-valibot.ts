@@ -153,7 +153,7 @@ export namespace ModelToValibot {
     return UnsupportedType(schema)
   }
   function Undefined(schema: Types.TUndefined) {
-    return Type(`v.undefinedType`, null, [])
+    return Type(`v.undefined_`, null, [])
   }
   function Union(schema: Types.TUnion) {
     const inner = schema.anyOf.map((schema) => Visit(schema)).join(`, `)
@@ -163,7 +163,7 @@ export namespace ModelToValibot {
     return Type(`v.unknown`, null, [])
   }
   function Void(schema: Types.TVoid) {
-    return Type(`v.voidType`, null, [])
+    return Type(`v.void_`, null, [])
   }
   function UnsupportedType(schema: Types.TSchema) {
     return `v.any(/* unsupported */)`
