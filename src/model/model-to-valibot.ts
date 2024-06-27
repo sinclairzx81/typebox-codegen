@@ -39,9 +39,9 @@ export namespace ModelToValibot {
   function Type(type: string, parameter: string | null, constraints: string[]) {
     if (constraints.length > 0) {
       if (typeof parameter === 'string') {
-        return `${type}(${parameter}, [${constraints.join(', ')}])`
+        return `v.pipe(${type}(${parameter}), ${constraints.join(', ')})`
       } else {
-        return `${type}([${constraints.join(', ')}])`
+        return `v.pipe(${type}(), ${constraints.join(', ')})`
       }
     } else {
       if (typeof parameter === 'string') {
@@ -153,7 +153,7 @@ export namespace ModelToValibot {
     return UnsupportedType(schema)
   }
   function Undefined(schema: Types.TUndefined) {
-    return Type(`v.undefinedType`, null, [])
+    return Type(`v.undefined_`, null, [])
   }
   function Union(schema: Types.TUnion) {
     const inner = schema.anyOf.map((schema) => Visit(schema)).join(`, `)
@@ -163,7 +163,7 @@ export namespace ModelToValibot {
     return Type(`v.unknown`, null, [])
   }
   function Void(schema: Types.TVoid) {
-    return Type(`v.voidType`, null, [])
+    return Type(`v.void_`, null, [])
   }
   function UnsupportedType(schema: Types.TSchema) {
     return `v.any(/* unsupported */)`
@@ -211,9 +211,9 @@ export namespace ModelToValibot {
     const type = Collect(schema)
     if (recursive_set.has(schema.$id!)) {
       output.push(`export ${ModelToTypeScript.GenerateType(model, schema.$id!)}`)
-      output.push(`export const ${schema.$id || `T`}: v.Output<${schema.$id}> = v.lazy(() => ${Formatter.Format(type)})`)
+      output.push(`export const ${schema.$id || `T`}: v.InferOutput<${schema.$id}> = v.lazy(() => ${Formatter.Format(type)})`)
     } else {
-      output.push(`export type ${schema.$id} = v.Output<typeof ${schema.$id}>`)
+      output.push(`export type ${schema.$id} = v.InferOutput<typeof ${schema.$id}>`)
       output.push(`export const ${schema.$id || `T`} = ${Formatter.Format(type)}`)
     }
     if (schema.$id) emitted_set.add(schema.$id)
