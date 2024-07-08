@@ -126,9 +126,9 @@ export namespace ModelToValibot {
     for (const [key, value] of globalThis.Object.entries(schema.patternProperties)) {
       const type = Visit(value)
       if (key === `^(0|[1-9][0-9]*)$`) {
-        return UnsupportedType(schema)
+        return Type('v.record', `v.number(), ${type}`, [])
       } else {
-        return Type(`v.record`, type, [])
+        return Type(`v.record`, `v.string(), ${type}`, [])
       }
     }
     throw Error(`Unreachable`)
