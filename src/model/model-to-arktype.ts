@@ -255,7 +255,7 @@ export namespace ModelToArkType {
     for (const type of model.types.filter((type) => Types.TypeGuard.IsSchema(type))) {
       buffer.push(`${GenerateType(type, model.types)},`)
     }
-    buffer.push('}).compile()')
+    buffer.push('}).export()')
     buffer.push('\n')
     for (const type of model.types.filter((type) => Types.TypeGuard.IsSchema(type))) {
       buffer.push(`export type ${type.$id} = typeof ${type.$id}.infer`)
