@@ -239,7 +239,7 @@ export namespace ModelToZod {
     reference_map.clear()
     recursive_set.clear()
     emitted_set.clear()
-    const buffer: string[] = [`import z from 'zod'`, '']
+    const buffer: string[] = [`import { z } from 'zod'`, '']
     for (const type of model.types.filter((type) => Types.TypeGuard.IsSchema(type))) {
       buffer.push(GenerateType(model, type, model.types))
     }
