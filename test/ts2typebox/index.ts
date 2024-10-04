@@ -576,4 +576,53 @@ describe('ts2typebox - Typescript to Typebox', () => {
       expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
     })
   })
+  test('useEmitConstOnly', () => {
+    const generatedTypebox = TypeScriptToTypeBox.Generate(
+      `
+       type A = {
+         a: number;
+       };
+       type B<T> = {
+         b: T;
+       };
+       interface C {
+         c: string;         
+       }
+       interface D<T> {
+         d: T;
+       }
+       enum E {
+         e
+       }
+      `,
+      { useEmitConstOnly: true },
+    )
+    const expectedResult = `
+      import { Type, Static, TSchema } from "@sinclair/typebox";
+
+      const A = Type.Object({
+        a: Type.Number(),
+      });
+
+      const B = <T extends TSchema>(T: T) =>
+        Type.Object({
+          b: T,
+        });
+
+      const C = Type.Object({
+        c: Type.String(),
+      });
+
+      const D = <T extends TSchema>(T: T) =>
+        Type.Object({
+          d: T,
+        });
+
+      enum EnumE {
+        e,
+      }
+      const E = Type.Enum(EnumE);
+    `
+    expectEqualIgnoreFormatting(generatedTypebox, expectedResult)
+  })
 })
