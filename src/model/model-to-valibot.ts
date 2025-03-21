@@ -117,22 +117,23 @@ export namespace ModelToValibot {
         const property = PropertyEncoder.Encode(key)
 
         if (optional) {
-          if (!union) {
-            return `${property}: v.optional(${Visit(value)})`
-          }
+          const isUndefined = value.anyOf.find(Types.TypeGuard.IsUndefined)
+          const isNull = value.anyOf.find(Types.TypeGuard.IsNull)
 
           if (union) {
-            const isUndefined = value.anyOf.find(Types.TypeGuard.IsUndefined)
-            const isNull = value.anyOf.find(Types.TypeGuard.IsNull)
-
             if (isUndefined && isNull) {
               const a = Types.Exclude(value, Types.Undefined())
               const b = Types.Exclude(a, Types.Null())
               return `${property}: v.nullish(${Visit(b)})`
             }
           }
-          const a = Types.Exclude(value, Types.Undefined())
-          return `${property}: v.optional(${Visit(a)})`
+
+          if (!union && isUndefined) {
+            const a = Types.Exclude(value, Types.Undefined())
+            return `${property}: v.optional(${Visit(a)})`
+          }
+
+          return `${property}: v.optional(${Visit(value)})`
         }
 
         if (!optional) {
