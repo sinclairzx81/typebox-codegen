@@ -114,7 +114,42 @@ export namespace ModelToValibot {
     const properties = globalThis.Object.entries(schema.properties).map(([key, value]) => {
       const optional = Types.TypeGuard.IsOptional(value)
       const property = PropertyEncoder.Encode(key)
-      return optional ? `${property}: v.optional(${Visit(value)})` : `${property}: ${Visit(value)}`
+
+      if(optional) {
+        if(!Types.TypeGuard.IsUnion(value)) {
+          return  `${property}: v.optional(${Visit(value)})`
+        }
+
+        if(Types.TypeGuard.IsUnion(value)) {
+          const isUndefined = value.anyOf.find(Types.TypeGuard.IsUndefined)
+          const isNull = value.anyOf.find(Types.TypeGuard.IsNull)
+
+          if(isUndefined && isNull){
+            const a =  Types.Exclude(value,Types.Undefined())
+            const b =  Types.Exclude(a,Types.Null())
+             return `${property}:v.nullish(${Visit(b)})`
+          }
+        }
+        const a = Types.Exclude(value,Types.Undefined())
+        return `${property}: v.optional(${Visit(a)})`
+      }
+
+      if(!optional){
+        if(Types.TypeGuard.IsUnion(value)) {
+          const notUndefined = Types.TypeGuard.IsNever(Types.Extract(value,Types.Undefined()))
+          const notNull = Types.TypeGuard.IsNever(Types.Extract(value,Types.Null()))
+            if(!notUndefined && notNull) {
+            const a = Types.Exclude(value,Types.Undefined())
+            return `${property}: v.undefinedable(${Visit(a)})`
+          }
+          if(notUndefined && !notNull) {
+            const a = Types.Exclude(value,Types.Null())
+            return `${property}: ${Visit(value)}`
+          }
+        }
+        return `${property}: ${Visit(value)}`
+      }
+
     }).join(`,`)
     const constraints: string[] = []
     return Type(`v.object`, `{\n${properties}\n}`, constraints)
