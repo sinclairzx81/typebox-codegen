@@ -93,7 +93,7 @@ export namespace ModelToValibot {
     return Type(`v.never`, null, [])
   }
   function Null(schema: Types.TNull) {
-    return Type(`v.null_`, null, [])
+    return Type(`v.null`, null, [])
   }
   function String(schema: Types.TString) {
     const constraints: string[] = []
@@ -153,7 +153,7 @@ export namespace ModelToValibot {
     return UnsupportedType(schema)
   }
   function Undefined(schema: Types.TUndefined) {
-    return Type(`v.undefined_`, null, [])
+    return Type(`v.undefined`, null, [])
   }
   function Union(schema: Types.TUnion) {
     const inner = schema.anyOf.map((schema) => Visit(schema)).join(`, `)
@@ -163,7 +163,7 @@ export namespace ModelToValibot {
     return Type(`v.unknown`, null, [])
   }
   function Void(schema: Types.TVoid) {
-    return Type(`v.void_`, null, [])
+    return Type(`v.void`, null, [])
   }
   function UnsupportedType(schema: Types.TSchema) {
     return `v.any(/* unsupported */)`
