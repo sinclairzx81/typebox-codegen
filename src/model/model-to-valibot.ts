@@ -110,49 +110,12 @@ export namespace ModelToValibot {
     return Type('v.number', null, constraints)
   }
   function Object(schema: Types.TObject) {
-    const properties = globalThis.Object.entries(schema.properties)
-      .map(([key, value]) => {
-        const optional = Types.TypeGuard.IsOptional(value)
-        const union = Types.TypeGuard.IsUnion(value)
-        const property = PropertyEncoder.Encode(key)
-
-        if (optional) {
-          const isUndefined = value.anyOf.find(Types.TypeGuard.IsUndefined)
-          const isNull = value.anyOf.find(Types.TypeGuard.IsNull)
-
-          if (union) {
-            if (isUndefined && isNull) {
-              const a = Types.Exclude(value, Types.Undefined())
-              const b = Types.Exclude(a, Types.Null())
-              return `${property}: v.nullish(${Visit(b)})`
-            }
-          }
-
-          if (!union && isUndefined) {
-            const a = Types.Exclude(value, Types.Undefined())
-            return `${property}: v.optional(${Visit(a)})`
-          }
-
-          return `${property}: v.optional(${Visit(value)})`
-        }
-
-        if (!optional) {
-          if (union) {
-            const notUndefined = Types.TypeGuard.IsNever(Types.Extract(value, Types.Undefined()))
-            const notNull = Types.TypeGuard.IsNever(Types.Extract(value, Types.Null()))
-            if (!notUndefined && notNull) {
-              const a = Types.Exclude(value, Types.Undefined())
-              return `${property}: v.undefinedable(${Visit(a)})`
-            }
-            if (notUndefined && !notNull) {
-              const a = Types.Exclude(value, Types.Null())
-              return `${property}: ${Visit(value)}`
-            }
-          }
-          return `${property}: ${Visit(value)}`
-        }
-      })
-      .join(`,`)
+    // prettier-ignore
+    const properties = globalThis.Object.entries(schema.properties).map(([key, value]) => {
+      const optional = Types.TypeGuard.IsOptional(value)
+      const property = PropertyEncoder.Encode(key)
+      return optional ? `${property}: v.optional(${Visit(value)})` : `${property}: ${Visit(value)}`
+    }).join(`,`)
     const constraints: string[] = []
     return Type(`v.object`, `{\n${properties}\n}`, constraints)
   }
