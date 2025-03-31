@@ -55,6 +55,11 @@ export interface TypeScriptToTypeBoxOptions {
    * for TypeBox which can operate on vanilla JS references. The default is false.
    */
   useIdentifiers?: boolean
+  /**
+   * Specifies if the output code should include only `const` statements. In other words,
+   * the `type` declarations aren't emitted. The default is false.
+   */
+  useEmitConstOnly?: boolean
 }
 /** Generates TypeBox types from TypeScript code */
 export namespace TypeScriptToTypeBox {
@@ -90,6 +95,8 @@ export namespace TypeScriptToTypeBox {
   let useIdentifiers = false
   // (option) specifies if typebox imports should be included
   let useTypeBoxImport = true
+  // (option) generate const statements only
+  let useEmitConstOnly = false
   // ------------------------------------------------------------------------------------------------------------
   // AST Query
   // ------------------------------------------------------------------------------------------------------------
@@ -143,6 +150,12 @@ export namespace TypeScriptToTypeBox {
   function ResolveOptions(node: Ts.TypeAliasDeclaration | Ts.PropertySignature | Ts.InterfaceDeclaration): Record<string, unknown> {
     const content = ResolveJsDocComment(node)
     return JsDoc.Parse(content)
+  }
+  // ------------------------------------------------------------------------------------------------------------
+  // String Utilities
+  // ------------------------------------------------------------------------------------------------------------
+  function JoinStatements(...statements: (string | false)[]): string {
+    return statements.filter(Boolean).join('\n')
   }
   // ------------------------------------------------------------------------------------------------------------
   // Identifiers
@@ -307,9 +320,9 @@ export namespace TypeScriptToTypeBox {
     const exports = IsExport(node) ? 'export ' : ''
     const members = node.members.map((member) => member.getText()).join(', ')
     const enumType = `${exports}enum Enum${node.name.getText()} { ${members} }`
-    const staticType = `${exports}type ${node.name.getText()} = Static<typeof ${node.name.getText()}>`
+    const staticType = !useEmitConstOnly && `${exports}type ${node.name.getText()} = Static<typeof ${node.name.getText()}>`
     const type = `${exports}const ${node.name.getText()} = Type.Enum(Enum${node.name.getText()})`
-    yield [enumType, '', staticType, type].join('\n')
+    yield JoinStatements(enumType, '', staticType, type)
   }
   function PropertiesFromTypeElementArray(members: Ts.NodeArray<Ts.TypeElement>): string {
     const properties = members.filter((member) => !Ts.isIndexSignatureDeclaration(member))
@@ -342,23 +355,23 @@ export namespace TypeScriptToTypeBox {
       const parameters = node.typeParameters.map((param) => `${Collect(param)}: ${Collect(param)}`).join(', ')
       const members = PropertiesFromTypeElementArray(node.members)
       const names = node.typeParameters.map((param) => `${Collect(param)}`).join(', ')
-      const staticDeclaration = `${exports}type ${node.name.getText()}<${constraints}> = Static<ReturnType<typeof ${node.name.getText()}<${names}>>>`
+      const staticDeclaration = !useEmitConstOnly && `${exports}type ${node.name.getText()}<${constraints}> = Static<ReturnType<typeof ${node.name.getText()}<${names}>>>`
       const rawTypeExpression = IsRecursiveType(node) ? `Type.Recursive(This => Type.Object(${members}))` : `Type.Object(${members})`
       const typeExpression = heritage.length === 0 ? rawTypeExpression : `Type.Composite([${heritage.join(', ')}, ${rawTypeExpression}])`
       const type = InjectOptions(typeExpression, options)
       const typeDeclaration = `${exports}const ${node.name.getText()} = <${constraints}>(${parameters}) => ${type}`
-      yield `${staticDeclaration}\n${typeDeclaration}`
+      yield JoinStatements(staticDeclaration, typeDeclaration)
     } else {
       const exports = IsExport(node) ? 'export ' : ''
       const identifier = ResolveIdentifier(node)
       const options = useIdentifiers ? { ...ResolveOptions(node), $id: identifier } : { ...ResolveOptions(node) }
       const members = PropertiesFromTypeElementArray(node.members)
-      const staticDeclaration = `${exports}type ${node.name.getText()} = Static<typeof ${node.name.getText()}>`
+      const staticDeclaration = !useEmitConstOnly && `${exports}type ${node.name.getText()} = Static<typeof ${node.name.getText()}>`
       const rawTypeExpression = IsRecursiveType(node) ? `Type.Recursive(This => Type.Object(${members}))` : `Type.Object(${members})`
       const typeExpression = heritage.length === 0 ? rawTypeExpression : `Type.Composite([${heritage.join(', ')}, ${rawTypeExpression}])`
       const type = InjectOptions(typeExpression, options)
       const typeDeclaration = `${exports}const ${node.name.getText()} = ${type}`
-      yield `${staticDeclaration}\n${typeDeclaration}`
+      yield JoinStatements(staticDeclaration, typeDeclaration)
     }
     recursiveDeclaration = null
   }
@@ -377,18 +390,18 @@ export namespace TypeScriptToTypeBox {
       const type_1 = isRecursiveType ? `Type.Recursive(This => ${type_0})` : type_0
       const type_2 = InjectOptions(type_1, options)
       const names = node.typeParameters.map((param) => Collect(param)).join(', ')
-      const staticDeclaration = `${exports}type ${node.name.getText()}<${constraints}> = Static<ReturnType<typeof ${node.name.getText()}<${names}>>>`
+      const staticDeclaration = !useEmitConstOnly && `${exports}type ${node.name.getText()}<${constraints}> = Static<ReturnType<typeof ${node.name.getText()}<${names}>>>`
       const typeDeclaration = `${exports}const ${node.name.getText()} = <${constraints}>(${parameters}) => ${type_2}`
-      yield `${staticDeclaration}\n${typeDeclaration}`
+      yield JoinStatements(staticDeclaration, typeDeclaration)
     } else {
       const exports = IsExport(node) ? 'export ' : ''
       const options = useIdentifiers ? { $id: ResolveIdentifier(node), ...ResolveOptions(node) } : { ...ResolveOptions(node) }
       const type_0 = Collect(node.type)
       const type_1 = isRecursiveType ? `Type.Recursive(This => ${type_0})` : type_0
       const type_2 = InjectOptions(type_1, options)
-      const staticDeclaration = `${exports}type ${node.name.getText()} = Static<typeof ${node.name.getText()}>`
+      const staticDeclaration = !useEmitConstOnly && `${exports}type ${node.name.getText()} = Static<typeof ${node.name.getText()}>`
       const typeDeclaration = `${exports}const ${node.name.getText()} = ${type_2}`
-      yield `${staticDeclaration}\n${typeDeclaration}`
+      yield JoinStatements(staticDeclaration, typeDeclaration)
     }
     recursiveDeclaration = null
   }
@@ -591,6 +604,7 @@ export namespace TypeScriptToTypeBox {
     useIdentifiers = options?.useIdentifiers ?? false
     useTypeBoxImport = options?.useTypeBoxImport ?? true
     typenames.clear()
+    useEmitConstOnly = options?.useEmitConstOnly ?? false
     useImports = false
     useOptions = false
     useGenerics = false
