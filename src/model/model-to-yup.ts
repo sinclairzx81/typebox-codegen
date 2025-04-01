@@ -195,12 +195,9 @@ export namespace ModelToYup {
   function Collect(schema: Types.TSchema) {
     return [...Visit(schema)].join(``)
   }
-  function GenerateType(model: TypeBoxModel, schema: Types.TSchema, references: Types.TSchema[]) {
+  function GenerateType(model: TypeBoxModel, schema: Types.TSchema) {
     const output: string[] = []
-    for (const reference of references) {
-      if (reference.$id === undefined) return UnsupportedType(schema)
-      reference_map.set(reference.$id, reference)
-    }
+    if (!schema.$id || !reference_map.has(schema.$id)) return UnsupportedType(schema);
     const type = Collect(schema)
     if (recursive_set.has(schema.$id!)) {
       output.push(`export ${ModelToTypeScript.GenerateType(model, schema.$id!)}`)
@@ -220,8 +217,11 @@ export namespace ModelToYup {
     recursive_set.clear()
     emitted_set.clear()
     const buffer: string[] = [`import y from 'yup'`, '']
+    for (const reference of model.types) {
+      if (reference.$id) reference_map.set(reference.$id, reference);
+    }
     for (const type of model.types.filter((type) => Types.TypeGuard.IsSchema(type))) {
-      buffer.push(GenerateType(model, type, model.types))
+      buffer.push(GenerateType(model, type))
     }
     return Formatter.Format(buffer.join('\n'))
   }
