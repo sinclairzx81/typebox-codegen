@@ -29,6 +29,17 @@ import { ModelToTypeScript } from './model-to-typescript'
 import { TypeBoxModel } from './model'
 import * as Types from '@sinclair/typebox'
 
+const stringFormatValidationMap: Record<string, string> = {
+  'date-time': 'datetime',
+  'date': 'date',
+  'time': 'time',
+  'duration': 'duration',
+  'email': 'email',
+  'uuid': 'uuid',
+  'url': 'url',
+  'emoji': 'emoji'
+};
+
 // --------------------------------------------------------------------------
 // ModelToZod
 // --------------------------------------------------------------------------
@@ -100,6 +111,12 @@ export namespace ModelToZod {
     buffer.push(`z.string()`)
     if (IsDefined<number>(schema.maxLength)) buffer.push(`.max(${schema.maxLength})`)
     if (IsDefined<number>(schema.minLength)) buffer.push(`.min(${schema.minLength})`)
+    if (IsDefined<string>(schema.format)) {
+      const validation = formatValidationMap[schema.format];
+      if (validation) {
+        buffer.push(`.${validation}()`);
+      }
+    }
     return Type(schema, buffer.join(``))
   }
   function Number(schema: Types.TNumber) {
