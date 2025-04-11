@@ -48,7 +48,14 @@ export namespace ModelToArkType {
   function IsTuple(types: string[]) {
     return types.some((type) => type.indexOf('[') === 0)
   }
-  function ConstructUnionOrIntersect(types: string[], operator: string) {
+  /**
+   * Check if the type need to be wrapped in an api chain (`type(...).some()`)
+   * Instead of string.
+   */
+  function IsApiChain(type: string) {
+    return type.indexOf('type(') === 0
+  }
+  function ConstructUnionOrIntersect(types: string[], operator: '&' | '|') {
     function Reduce(types: string[]): string {
       if (types.length === 0) return ''
       const [left, ...right] = types
@@ -57,8 +64,22 @@ export namespace ModelToArkType {
     if (IsTuple(types)) {
       return Reduce(types)
     } else {
-      const mapped = types.map((type) => Unwrap(type)).join(` ${operator} `)
-      return Wrap(mapped)
+      // For some cases arktype cannot construct types from string literals,
+      // i.e `{ [key: string]: any } | undefined` to `'{} | undefined'`.
+      // Instead, create api chain `type({}).or('undefined')`.
+      const [left, ...right] = types
+      if (IsApiChain(left)) {
+        let chainOperator = null;
+        if (operator === '&') {
+          chainOperator = 'intersect'
+        } else if (operator === '|') {
+          chainOperator = 'or'
+        }
+        return [left, ...right.map((v) => `${chainOperator}(${v})`)].join('.')
+      } else {
+        const mapped = types.map((type) => Unwrap(type)).join(` ${operator} `)
+        return Wrap(mapped)
+      }
     }
   }
   // ------------------------------------------------------------------------
@@ -78,12 +99,12 @@ export namespace ModelToArkType {
   function ConstrainedNumericType(type: string, options: Types.NumberOptions | Types.BigIntOptions) {
     // prettier-ignore
     const minimum = IsDefined<number>(options.exclusiveMinimum) ? (options.exclusiveMinimum + 1) :
-                    IsDefined<number>(options.minimum) ? (options.minimum) :
-                    undefined
+      IsDefined<number>(options.minimum) ? (options.minimum) :
+        undefined
     // prettier-ignore
     const maximum = IsDefined<number>(options.exclusiveMaximum) ? (options.exclusiveMaximum - 1) :
-                    IsDefined<number>(options.maximum) ? (options.maximum) :
-                    undefined
+      IsDefined<number>(options.maximum) ? (options.maximum) :
+        undefined
     if (IsDefined<number>(minimum) && IsDefined<number>(maximum)) {
       return Wrap(`${minimum}<=${type}<=${maximum}`)
     } else if (IsDefined<number>(minimum)) {
@@ -158,7 +179,8 @@ export namespace ModelToArkType {
       })
       .join(`,`)
     const buffer: string[] = []
-    buffer.push(`{\n${properties}\n}`)
+    buffer.push(`type({\n${properties}\n})`)
+    import_references.add('type')
     return buffer.join(`\n`)
   }
   function Promise(schema: Types.TPromise) {
@@ -247,6 +269,7 @@ export namespace ModelToArkType {
   }
   const reference_map = new Map<string, Types.TSchema>()
   const emitted_types = new Set<string>()
+  const import_references = new Set<string>()
   export function Generate(model: TypeBoxModel): string {
     reference_map.clear()
     emitted_types.clear()
@@ -261,7 +284,11 @@ export namespace ModelToArkType {
       buffer.push(`export type ${type.$id} = typeof ${type.$id}.infer`)
       buffer.push(`export const ${type.$id} = types.${type.$id}`)
     }
-    buffer.unshift(`import { scope } from 'arktype'`, '')
+
+    const imports = ['scope', ...import_references].join(',')
+    buffer.unshift(`import { ${imports} } from 'arktype'`, '')
+    import_references.clear()
+
     return Formatter.Format(buffer.join('\n'))
   }
 }

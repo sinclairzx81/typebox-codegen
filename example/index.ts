@@ -22,10 +22,14 @@ export type B = {
   a: number,
   b: string,
   c: boolean
-} 
-export type T = A & B 
+}
+export type T = A & B
 
 export type F = (a: number) => void
+
+export type C = {
+  f: { [key: string]: any } | undefined;
+}
 
 type M = {[K in keyof T]: 1 }
 `
