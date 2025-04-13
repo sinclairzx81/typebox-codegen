@@ -69,7 +69,7 @@ export namespace ModelToArkType {
       // Instead, create api chain `type({}).or('undefined')`.
       const [left, ...right] = types
       if (IsApiChain(left)) {
-        let chainOperator = null;
+        let chainOperator = null
         if (operator === '&') {
           chainOperator = 'intersect'
         } else if (operator === '|') {
